@@ -36,6 +36,12 @@ public static class SaveData
         set { PlayerPrefs.SetInt(VibrationKey, value ? 1 : 0); PlayerPrefs.Save(); }
     }
 
+    public static bool Sound
+    {
+        get => PlayerPrefs.GetInt("sound", 1) == 1;
+        set { PlayerPrefs.SetInt("sound", value ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
     public static bool TutorialDone
     {
         get => PlayerPrefs.GetInt(TutorialKey, 0) == 1;

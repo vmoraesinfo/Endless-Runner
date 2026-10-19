@@ -80,7 +80,7 @@ public class SelectCars : MonoBehaviour
         RefreshUI();
     }
 
-    void RefreshUI()
+    public void RefreshUI()
     {
         if (catalog == null || carNameText == null) return;
         var entry = catalog.Get(carIndex);
@@ -88,7 +88,7 @@ public class SelectCars : MonoBehaviour
 
         carNameText.text = entry.displayName.ToUpperInvariant();
         coinsText.text = SaveData.Coins.ToString();
-        bestText.text = SaveData.BestScore > 0 ? $"RECORDE: {SaveData.BestScore} m" : "";
+        bestText.text = SaveData.BestScore > 0 ? $"RECORDE: {SaveData.BestScore:N0} pts" : "";
         lockedBadge.SetActive(!unlocked);
 
         if (unlocked)

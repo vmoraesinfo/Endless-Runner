@@ -59,7 +59,32 @@ public class PlayerController : MonoBehaviour
     public void ChangeLane(int direction)
     {
         if (!InputEnabled) return;
-        Lane = Mathf.Clamp(Lane + direction, 0, LaneCount - 1);
+        int newLane = Mathf.Clamp(Lane + direction, 0, LaneCount - 1);
+        if (newLane == Lane) return;
+        Lane = newLane;
+        LastLaneChangeTime = Time.time;
+    }
+
+    /// <summary>Hora (Time.time) da última troca de faixa — usada para detectar o "raspão".</summary>
+    public float LastLaneChangeTime { get; private set; } = -10f;
+
+    /// <summary>Swipe para cima / W / seta para cima.</summary>
+    public event System.Action BoostRequested;
+
+    [Header("Efeitos (opcional)")]
+    public GameObject shieldBubble;
+    public ParticleSystem nitroFlame;
+
+    public void SetShield(bool on)
+    {
+        if (shieldBubble != null) shieldBubble.SetActive(on);
+    }
+
+    public void SetNitro(bool on)
+    {
+        if (nitroFlame == null) return;
+        if (on) nitroFlame.Play();
+        else nitroFlame.Stop();
     }
 
     public void MoveForward(float distance)
@@ -92,6 +117,7 @@ public class PlayerController : MonoBehaviour
         {
             if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) ChangeLane(-1);
             if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) ChangeLane(1);
+            if (kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame) BoostRequested?.Invoke();
         }
 
         var pointer = Pointer.current;
@@ -117,6 +143,11 @@ public class PlayerController : MonoBehaviour
                 ChangeLane(delta.x > 0 ? 1 : -1);
                 swipeConsumed = true;
             }
+            else if (delta.y > threshold && delta.y > Mathf.Abs(delta.x))
+            {
+                BoostRequested?.Invoke();
+                swipeConsumed = true;
+            }
         }
     }
 
@@ -131,8 +162,16 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        if (other.GetComponentInParent<Obstacle>() != null)
-            GameManager.Instance.OnPlayerHit();
+        var pickup = other.GetComponent<Pickup>();
+        if (pickup != null)
+        {
+            GameManager.Instance.CollectPickup(pickup);
+            return;
+        }
+
+        var obstacle = other.GetComponentInParent<Obstacle>();
+        if (obstacle != null)
+            GameManager.Instance.OnPlayerHit(obstacle);
     }
 
     public void Crash()

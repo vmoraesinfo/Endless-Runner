@@ -26,6 +26,8 @@ public static class SmokeTest
     static string pendingCaptureName;
     static AutoPilot pilot;
     static bool earlyShot;
+    static bool garageLockedShot;
+    static bool nitroShot;
     static Camera captureCam;
 
     static SmokeTest()
@@ -92,25 +94,42 @@ public static class SmokeTest
         var gm = GameManager.Instance;
         switch (step)
         {
-            case 0: // Garagem
+            case 0: // Garagem: recompensa diária aparece na primeira visita
                 if (StepTime < 1f) return;
                 var select = Object.FindFirstObjectByType<SelectCars>();
                 if (select == null) { Fail("SelectCars não encontrado na garagem"); Finish(); return; }
                 var catalog = CarCatalog.Load();
                 Log($"Catálogo: {catalog.Count} carros");
                 if (catalog.Count == 0) Fail("Catálogo vazio");
-                BeginCapture("01_garage");
+                var menus = Object.FindFirstObjectByType<GarageMenus>();
+                if (menus == null) { Fail("GarageMenus não encontrado"); Finish(); return; }
+                if (!menus.dailyPanel.activeSelf) Fail("Recompensa diária não apareceu na primeira visita");
+                BeginCapture("01_daily");
                 Next();
                 break;
 
-            case 1:
-                Object.FindFirstObjectByType<SelectCars>().NextCar();
-                BeginCapture("02_garage_locked");
+            case 1: // Resgata a diária e abre as missões
+                var m1 = Object.FindFirstObjectByType<GarageMenus>();
+                m1.ClaimDaily();
+                if (SaveData.Coins != 50) Fail($"Recompensa diária deveria dar 50 moedas (deu {SaveData.Coins})");
+                if (DailyReward.Available) Fail("Recompensa diária continua disponível depois de resgatar");
+                m1.OpenMissions();
+                if (!m1.missionsPanel.activeSelf) Fail("Painel de missões não abriu");
+                Log("Missões: " + string.Join(" | ", System.Linq.Enumerable.Select(Missions.Active, x => Missions.Describe(x))));
+                BeginCapture("02_missions");
                 Next();
                 break;
 
             case 2:
                 var s = Object.FindFirstObjectByType<SelectCars>();
+                if (!garageLockedShot)
+                {
+                    garageLockedShot = true;
+                    Object.FindFirstObjectByType<GarageMenus>().CloseMissions();
+                    s.NextCar();
+                    BeginCapture("03_garage_locked");
+                    return;
+                }
                 s.PreviousCar();
                 s.OnActionButton(); // carro 0 é grátis → carrega a cena Game
                 Next();
@@ -119,7 +138,7 @@ public static class SmokeTest
             case 3: // Tela inicial da corrida
                 if (gm == null || StepTime < 3f) return;
                 if (gm.State != GameState.Ready) Fail("Corrida deveria começar em Ready");
-                BeginCapture("03_start");
+                BeginCapture("04_start");
                 Next();
                 break;
 
@@ -136,16 +155,19 @@ public static class SmokeTest
                 if (gm.State == GameState.GameOver)
                 {
                     Fail($"AutoPilot bateu aos {StepTime:F1}s (score {gm.Score}) — padrão de trânsito pode ser impossível");
-                    BeginCapture("04_unexpected_crash");
+                    BeginCapture("05_unexpected_crash");
                     step = 7; stepStart = Time.time;
                     return;
                 }
-                if (!earlyShot && StepTime > 4f) { earlyShot = true; BeginCapture("04_run_early"); return; }
+                if (!earlyShot && StepTime > 4f) { earlyShot = true; BeginCapture("05_run_early"); return; }
+                if (!nitroShot && gm.NitroActive) { nitroShot = true; BeginCapture("06_nitro"); return; }
                 if (StepTime < 45f) return;
-                Log($"45s de corrida: score {gm.Score} m, moedas {gm.RunCoins}, velocidade {gm.Speed:F1} m/s, fileiras ativas {gm.traffic.Rows.Count}");
+                Log($"45s de corrida: {gm.Score} pts, {gm.Distance:F0} m, moedas {gm.RunCoins}, raspões {gm.NearMisses}, nitros {gm.NitrosUsed}, combo máx x{gm.BestMultiplier:0.#}, velocidade {gm.Speed:F1} m/s");
+                if (gm.NearMisses == 0) Fail("Nenhum raspão em 45s desviando em cima da hora");
+                if (gm.NitrosUsed == 0) Fail("Nitro nunca foi usado em 45s");
                 if (gm.Score < 500) Fail("Score baixo demais depois de 45s");
                 if (gm.RunCoins == 0) Fail("Nenhuma moeda coletada em 45s");
-                BeginCapture("05_run_fast");
+                BeginCapture("07_run_fast");
                 Next();
                 break;
 
@@ -163,8 +185,11 @@ public static class SmokeTest
                 if (StepTime < 0.8f) return; // espera a animação da batida
                 Log($"Bateu: score {gm.Score}, recorde salvo {SaveData.BestScore}, moedas salvas {SaveData.Coins}");
                 if (SaveData.BestScore != gm.Score) Fail("Recorde não foi salvo");
-                if (SaveData.Coins != gm.RunCoins) Fail("Moedas da corrida não foram guardadas");
-                BeginCapture("06_gameover");
+                if (SaveData.Coins != 50 + gm.RunCoins) Fail("Moedas da corrida não foram guardadas");
+                bool anyProgress = false;
+                foreach (var mi in Missions.Active) if (mi.progress > 0) anyProgress = true;
+                if (!anyProgress) Fail("Nenhuma missão recebeu progresso");
+                BeginCapture("08_gameover");
                 Next();
                 break;
 
@@ -178,7 +203,7 @@ public static class SmokeTest
             case 9:
                 if (StepTime < 1f) return;
                 if (gm.State != GameState.Running) Fail("Bateu logo depois de continuar (invulnerabilidade/limpeza)");
-                BeginCapture("07_revived");
+                BeginCapture("09_revived");
                 Next();
                 break;
 
@@ -187,7 +212,7 @@ public static class SmokeTest
                 if (gm.State != GameState.Running) Fail("Bateu nos 5s seguintes ao continuar");
                 gm.Pause();
                 if (gm.State != GameState.Paused || Time.timeScale != 0f) Fail("Pausa não parou o tempo");
-                BeginCapture("08_pause");
+                BeginCapture("10_pause");
                 Next();
                 break;
 
