@@ -1,0 +1,44 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*_BurstDebugInformation_DoNotShip/
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb.meta
+*.mdb
+*.opendb
+*.VC.db
+
+# Build output
+*.apk
+*.aab
+*.unitypackage
+!/Assets/**/*.unitypackage.meta
+crashlytics-build.properties
+
+# Android signing (NUNCA commitar)
+*.keystore
+*.jks
+
+# OS
+.DS_Store
+Thumbs.db
