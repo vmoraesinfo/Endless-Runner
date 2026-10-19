@@ -30,6 +30,7 @@ public class GarageMenus : MonoBehaviour
     void Start()
     {
         missionsPanel.SetActive(false);
+        if (upgradesPanel != null) upgradesPanel.SetActive(false);
         dailyPanel.SetActive(DailyReward.Available);
         if (DailyReward.Available)
         {
@@ -38,6 +39,60 @@ public class GarageMenus : MonoBehaviour
             dailyRewardText.text = $"+{DailyReward.RewardFor(day)}";
         }
         RefreshBadge();
+    }
+
+    // ---------- Melhorias ----------
+
+    [System.Serializable]
+    public class UpgradeRow
+    {
+        public UpgradeType type;
+        public TMP_Text description;
+        public Image[] pips;
+        public Button buyButton;
+        public TMP_Text buyLabel;
+    }
+
+    [Header("Melhorias")]
+    public GameObject upgradesPanel;
+    public UpgradeRow[] upgradeRows;
+
+    public void OpenUpgrades()
+    {
+        Sfx.I.Click();
+        upgradesPanel.SetActive(true);
+        RefreshUpgrades();
+    }
+
+    public void CloseUpgrades()
+    {
+        Sfx.I.Click();
+        upgradesPanel.SetActive(false);
+    }
+
+    public void BuyNitro() => Buy(UpgradeType.Nitro);
+    public void BuyMagnet() => Buy(UpgradeType.Magnet);
+    public void BuyShield() => Buy(UpgradeType.Shield);
+
+    void Buy(UpgradeType type)
+    {
+        if (Upgrades.TryBuy(type)) Sfx.I.PowerUp();
+        RefreshUpgrades();
+        garage.RefreshUI();
+    }
+
+    void RefreshUpgrades()
+    {
+        foreach (var row in upgradeRows)
+        {
+            int level = Upgrades.Level(row.type);
+            int price = Upgrades.NextPrice(row.type);
+            row.description.text = Upgrades.Describe(row.type);
+            for (int i = 0; i < row.pips.Length; i++)
+                row.pips[i].color = i < level ? new Color(1f, 0.8f, 0.15f) : new Color(1f, 1f, 1f, 0.15f);
+            row.buyButton.interactable = price >= 0 && SaveData.Coins >= price;
+            row.buyLabel.text = price < 0 ? "MÁXIMO" : $"MELHORAR {price}";
+        }
     }
 
     public void ClaimDaily()

@@ -500,6 +500,7 @@ public static partial class GameBuilder
         AddMapButton(ui, select);
 
         BuildGarageMenus(canvas.transform, ui, select);
+        BuildShopUI(canvas.transform, ui, select);
 
         // Setas existentes: ancoradas nas laterais, na altura do carro.
         PlaceArrow(canvas.transform, "PrevButton", "arrow_left", new Vector2(0, 0.5f), new Vector2(100, -200));

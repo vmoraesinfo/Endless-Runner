@@ -30,6 +30,8 @@ public static class SmokeTest
     static bool nitroShot;
     static bool cityShot;
     static int tourStep;
+    static int shopStep;
+    static int coinsBeforeRun;
     static readonly int[] TourCars = { 6, 10, 14, 15, 18, 22 };
 
     static int CurrentCarIndex(SelectCars s) =>
@@ -146,6 +148,47 @@ public static class SmokeTest
                     return;
                 }
                 while (CurrentCarIndex(s) != 0) s.NextCar();
+
+                // Loja: melhorias e pintura.
+                var shop = Object.FindFirstObjectByType<GarageMenus>();
+                if (shopStep == 0)
+                {
+                    SaveData.Coins += 5000;
+                    shop.OpenUpgrades();
+                    shop.BuyNitro();
+                    shop.BuyShield();
+                    shop.BuyShield();
+                    if (Upgrades.Level(UpgradeType.Nitro) != 1) Fail("Compra da melhoria de nitro falhou");
+                    if (Upgrades.Level(UpgradeType.Shield) != 2) Fail("Compra da melhoria de escudo falhou");
+                    if (SaveData.Coins != 50 + 5000 - 200 - 200 - 500) Fail($"Preço das melhorias errado (moedas {SaveData.Coins})");
+                    BeginCapture("03b_upgrades");
+                    shopStep = 1;
+                    return;
+                }
+                if (shopStep == 1)
+                {
+                    shop.CloseUpgrades();
+                    var picker = Object.FindFirstObjectByType<PaintPicker>();
+                    picker.Pick(2); // azul
+                    if (Paints.Selected(0) != 2) Fail("Pintura comprada não ficou selecionada");
+                    BeginCapture("03c_paint_blue");
+                    shopStep = 2;
+                    return;
+                }
+                if (shopStep == 2)
+                {
+                    // Um carro de outro pack (paleta em textura) para conferir a recoloração.
+                    while (CurrentCarIndex(s) != 6) s.NextCar();
+                    SaveData.UnlockCar(6);
+                    s.RefreshUI();
+                    Object.FindFirstObjectByType<PaintPicker>().Refresh();
+                    Object.FindFirstObjectByType<PaintPicker>().Pick(1); // vermelho
+                    BeginCapture("03d_paint_red_hatch");
+                    shopStep = 3;
+                    return;
+                }
+                while (CurrentCarIndex(s) != 0) s.NextCar();
+                coinsBeforeRun = SaveData.Coins;
                 s.OnActionButton(); // carro 0 é grátis → carrega a cena Game
                 Next();
                 break;
@@ -153,6 +196,7 @@ public static class SmokeTest
             case 3: // Tela inicial da corrida
                 if (gm == null || StepTime < 3f) return;
                 if (gm.State != GameState.Ready) Fail("Corrida deveria começar em Ready");
+                if (!Mathf.Approximately(gm.nitroDuration, Upgrades.NitroDuration(1))) Fail($"Melhoria de nitro não aplicada (duração {gm.nitroDuration})");
                 BeginCapture("04_start");
                 Next();
                 break;
@@ -200,7 +244,7 @@ public static class SmokeTest
                 if (StepTime < 0.8f) return; // espera a animação da batida
                 Log($"Bateu: score {gm.Score}, recorde salvo {SaveData.BestScore}, moedas salvas {SaveData.Coins}");
                 if (SaveData.BestScore != gm.Score) Fail("Recorde não foi salvo");
-                if (SaveData.Coins != 50 + gm.RunCoins) Fail("Moedas da corrida não foram guardadas");
+                if (SaveData.Coins != coinsBeforeRun + gm.RunCoins) Fail("Moedas da corrida não foram guardadas");
                 bool anyProgress = false;
                 foreach (var mi in Missions.Active) if (mi.progress > 0) anyProgress = true;
                 if (!anyProgress) Fail("Nenhuma missão recebeu progresso");

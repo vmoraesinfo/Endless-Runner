@@ -25,6 +25,12 @@ public class SelectCars : MonoBehaviour
     public GameObject lockedBadge;
     public TMP_Text mapText;
 
+    /// <summary>Carro em exibição e se já é do jogador (usado pela escolha de pintura).</summary>
+    public int CurrentCar => carIndex;
+    public bool CurrentOwned => catalog != null && SaveData.IsCarUnlocked(carIndex, catalog.Get(carIndex).price);
+    public GameObject CurrentCarObject => Cars != null && Cars.Count > 0 ? Cars[carIndex] : null;
+    public event System.Action CarChanged;
+
     CarCatalog catalog;
     MapCatalog maps;
     int mapIndex;
@@ -96,7 +102,9 @@ public class SelectCars : MonoBehaviour
         {
             Cars[i].SetActive(i == carIndex);
         }
+        CarPaint.Apply(Cars[carIndex], Paints.Selected(carIndex));
         RefreshUI();
+        CarChanged?.Invoke();
     }
 
     public void RefreshUI()

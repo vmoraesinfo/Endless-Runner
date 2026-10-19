@@ -117,11 +117,11 @@ public class GameUI : MonoBehaviour
         nitroLabel.text = active ? "NITRO!" : ready ? "NITRO PRONTO" : "NITRO";
     }
 
-    public void UpdatePowerUps(float magnetSeconds, bool shield)
+    public void UpdatePowerUps(float magnetSeconds, int shieldCharges)
     {
         string text = "";
         if (magnetSeconds > 0f) text += $"ÍMÃ {Mathf.CeilToInt(magnetSeconds)}s";
-        if (shield) text += (text.Length > 0 ? "   " : "") + "ESCUDO";
+        if (shieldCharges > 0) text += (text.Length > 0 ? "   " : "") + (shieldCharges > 1 ? $"ESCUDO x{shieldCharges}" : "ESCUDO");
         if (powerUpText.text != text) powerUpText.text = text;
     }
 

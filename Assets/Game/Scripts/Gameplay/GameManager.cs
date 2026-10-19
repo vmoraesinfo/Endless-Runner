@@ -75,7 +75,9 @@ public class GameManager : MonoBehaviour
     public float Nitro01 { get; private set; }
     public bool NitroActive { get; private set; }
     public int NitrosUsed { get; private set; }
-    public bool ShieldActive { get; private set; }
+    /// <summary>Batidas que o escudo ainda aguenta (melhoria "Escudo" aumenta).</summary>
+    public int ShieldCharges { get; private set; }
+    public bool ShieldActive => ShieldCharges > 0;
     public float MagnetTime { get; private set; }
 
     float points;
@@ -126,6 +128,10 @@ public class GameManager : MonoBehaviour
         var catalog = CarCatalog.Load();
         var entry = catalog.Get(SaveData.SelectedCar);
         player.SetCar(entry.prefab);
+        CarPaint.Apply(player.Visual.gameObject, Paints.Selected(SaveData.SelectedCar));
+        // Melhorias compradas na garagem.
+        nitroDuration = Upgrades.NitroDuration(Upgrades.Level(UpgradeType.Nitro));
+        magnetDuration = Upgrades.MagnetDuration(Upgrades.Level(UpgradeType.Magnet));
         player.transform.position = new Vector3(player.LaneX(1), 0f, 0f);
         startZ = player.transform.position.z;
         player.BoostRequested += TryNitro;
@@ -140,7 +146,7 @@ public class GameManager : MonoBehaviour
         ui.UpdateHud(0, 0);
         ui.UpdateCombo(1f, 0f);
         ui.UpdateNitro(0f, false, false);
-        ui.UpdatePowerUps(0f, false);
+        ui.UpdatePowerUps(0f, 0);
         AdsManager.Instance.HideBanner();
         Sfx.ApplyVolume();
     }
@@ -288,9 +294,9 @@ public class GameManager : MonoBehaviour
                 ui.Popup("ÍMÃ!", "puxa as moedas", new Color(1f, 0.45f, 0.4f), 0.9f);
                 break;
             case PickupType.Shield:
-                ShieldActive = true;
+                ShieldCharges = Upgrades.ShieldCharges(Upgrades.Level(UpgradeType.Shield));
                 player.SetShield(true);
-                ui.Popup("ESCUDO!", "aguenta uma batida", new Color(0.45f, 0.75f, 1f), 0.9f);
+                ui.Popup("ESCUDO!", ShieldCharges == 1 ? "aguenta uma batida" : $"aguenta {ShieldCharges} batidas", new Color(0.45f, 0.75f, 1f), 0.9f);
                 break;
         }
         traffic.ReturnPickup(pickup);
@@ -311,7 +317,7 @@ public class GameManager : MonoBehaviour
                 coin.transform.position = Vector3.MoveTowards(coin.transform.position, target, pull);
             }
         }
-        ui.UpdatePowerUps(Mathf.Max(0f, MagnetTime), ShieldActive);
+        ui.UpdatePowerUps(Mathf.Max(0f, MagnetTime), ShieldCharges);
     }
 
     // ---------- Batida ----------
@@ -328,8 +334,8 @@ public class GameManager : MonoBehaviour
         if (Time.time < invulnerableUntil) return;
         if (ShieldActive)
         {
-            ShieldActive = false;
-            player.SetShield(false);
+            ShieldCharges--;
+            player.SetShield(ShieldActive);
             invulnerableUntil = Time.time + 1f;
             Smash(obstacle, "ESCUDO SALVOU!");
             return;
