@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ba10098bcfbc3d48a04e3c98993f6e2, type: 3}
+  m_Script: {fileID: 11500000, guid: b99eba93d59a27d418fb0dcd1fb9f7cd, type: 3}
   m_Name: TrafficCatalog
   m_EditorClassIdentifier: Assembly-CSharp::TrafficCatalog
   scale: 1.15

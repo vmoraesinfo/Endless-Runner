@@ -65,6 +65,14 @@ public class TrafficSpawner : MonoBehaviour
     void Awake()
     {
         traffic = TrafficCatalog.Load();
+        if (traffic == null || traffic.vehicles.Count == 0)
+        {
+            // Sem catálogo de trânsito a corrida ficaria vazia; usa os carros da garagem para não quebrar.
+            Debug.LogError("[TrafficSpawner] Resources/TrafficCatalog não carregou; usando os carros da garagem como trânsito.");
+            traffic = ScriptableObject.CreateInstance<TrafficCatalog>();
+            foreach (var car in CarCatalog.Load().cars)
+                traffic.vehicles.Add(new TrafficCatalog.Entry { prefab = car.prefab, weight = 1f });
+        }
     }
 
     /// <summary>Avança o trânsito e cria/recicla fileiras. difficulty vai de 0 (início) a 1 (velocidade máxima).</summary>
