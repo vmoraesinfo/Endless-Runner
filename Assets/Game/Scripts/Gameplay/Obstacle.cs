@@ -4,4 +4,5 @@ using UnityEngine;
 public class Obstacle : MonoBehaviour
 {
     [HideInInspector] public GameObject sourcePrefab;
+    [HideInInspector] public float length;
 }

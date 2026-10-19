@@ -16,6 +16,8 @@ public class TrafficSpawner : MonoBehaviour
         public Transform root;
         public bool[] blocked = new bool[PlayerController.LaneCount];
         public bool passed;
+        /// <summary>Comprimento ocupado pela fileira (veículo mais comprido + variação de posição).</summary>
+        public float length;
         public readonly List<GameObject> cars = new List<GameObject>();
         public readonly List<GameObject> coins = new List<GameObject>();
         public readonly List<Pickup> pickups = new List<Pickup>();
@@ -55,14 +57,14 @@ public class TrafficSpawner : MonoBehaviour
     readonly Dictionary<GameObject, Stack<GameObject>> carPool = new Dictionary<GameObject, Stack<GameObject>>();
     readonly Stack<GameObject> coinPool = new Stack<GameObject>();
     readonly Dictionary<PickupType, Stack<Pickup>> pickupPool = new Dictionary<PickupType, Stack<Pickup>>();
-    CarCatalog catalog;
+    TrafficCatalog traffic;
     int lastFreeLane = 1;
 
     public IReadOnlyList<Row> Rows => rows;
 
     void Awake()
     {
-        catalog = CarCatalog.Load();
+        traffic = TrafficCatalog.Load();
     }
 
     /// <summary>Avança o trânsito e cria/recicla fileiras. difficulty vai de 0 (início) a 1 (velocidade máxima).</summary>
@@ -89,22 +91,15 @@ public class TrafficSpawner : MonoBehaviour
         }
 
         float relSpeed = Mathf.Max(playerSpeed - trafficSpeed, 6f);
-        float nextZ = rows.Count > 0 ? rows[rows.Count - 1].Z : playerZ + firstRowDistance;
-        while (nextZ < playerZ + spawnAhead)
-        {
-            float reaction = Mathf.Lerp(reactionTimeEasy, reactionTimeHard, difficulty);
-            float gap = Mathf.Max(minGap, relSpeed * reaction + carLength);
-            float z = rows.Count > 0 ? nextZ + gap : nextZ;
-            SpawnRow(z, gap, difficulty);
-            nextZ = z;
-        }
+        float reaction = Mathf.Lerp(reactionTimeEasy, reactionTimeHard, difficulty);
+        while (rows.Count == 0 || rows[rows.Count - 1].Z < playerZ + spawnAhead)
+            SpawnRow(playerZ, relSpeed, reaction, difficulty);
     }
 
-    void SpawnRow(float z, float gap, float difficulty)
+    void SpawnRow(float playerZ, float relSpeed, float reaction, float difficulty)
     {
         Row row = rowPool.Count > 0 ? rowPool.Pop() : new Row { root = new GameObject("Row").transform };
         row.root.SetParent(transform, false);
-        row.root.position = new Vector3(0f, 0f, z);
         row.root.gameObject.SetActive(true);
         row.passed = false;
 
@@ -124,6 +119,8 @@ public class TrafficSpawner : MonoBehaviour
             candidates.RemoveAt(pick);
         }
 
+        // Escolhe os veículos antes de posicionar: caminhões compridos pedem mais espaço até a fileira anterior.
+        row.length = carLength;
         for (int l = 0; l < lanes; l++)
         {
             if (!row.blocked[l]) continue;
@@ -134,7 +131,23 @@ public class TrafficSpawner : MonoBehaviour
             car.transform.localRotation = Quaternion.identity;
             car.SetActive(true);
             row.cars.Add(car);
+            row.length = Mathf.Max(row.length, car.GetComponent<Obstacle>().length + 3f);
         }
+
+        // Distância centro a centro = tempo de reação + metade de cada fileira.
+        float gap;
+        if (rows.Count == 0)
+        {
+            gap = firstRowDistance;
+            row.root.position = new Vector3(0f, 0f, playerZ + firstRowDistance);
+        }
+        else
+        {
+            var prev = rows[rows.Count - 1];
+            gap = Mathf.Max(minGap, relSpeed * reaction + (prev.length + row.length) * 0.5f);
+            row.root.position = new Vector3(0f, 0f, prev.Z + gap);
+        }
+        float prevHalf = rows.Count == 0 ? 0f : rows[rows.Count - 1].length * 0.5f;
 
         // Faixa livre que dá para alcançar sem trocar de faixa, se possível.
         int rewardLane = row.blocked[lastFreeLane] ? free : lastFreeLane;
@@ -148,9 +161,10 @@ public class TrafficSpawner : MonoBehaviour
         }
         else if (coinPrefab != null && Random.value < coinLineChance)
         {
-            // Moedas na faixa livre, no espaço entre a fileira anterior e esta.
-            float start = -gap + carLength * 1.2f;
-            float end = -carLength * 0.9f;
+            // Moedas na faixa livre, no espaço livre entre a fileira anterior e esta.
+            float start = -gap + prevHalf + 1.5f;
+            float end = -row.length * 0.5f - 1f;
+            start = Mathf.Max(start, end - 11 * coinSpacing); // no máximo 12 moedas por linha
             for (float cz = start; cz <= end; cz += coinSpacing)
             {
                 var coin = coinPool.Count > 0 ? coinPool.Pop() : Instantiate(coinPrefab);
@@ -167,11 +181,11 @@ public class TrafficSpawner : MonoBehaviour
 
     GameObject TakeCar()
     {
-        var entry = catalog.Get(Random.Range(0, catalog.Count));
-        if (!carPool.TryGetValue(entry.prefab, out var stack))
+        var prefab = traffic.PickRandom();
+        if (!carPool.TryGetValue(prefab, out var stack))
         {
             stack = new Stack<GameObject>();
-            carPool[entry.prefab] = stack;
+            carPool[prefab] = stack;
         }
         if (stack.Count > 0)
         {
@@ -180,14 +194,15 @@ public class TrafficSpawner : MonoBehaviour
             return pooled;
         }
 
-        var car = CarVisual.Spawn(entry.prefab, transform, carLength);
+        var car = CarVisual.SpawnScaled(prefab, transform, traffic.scale, traffic.maxWidth);
         var obstacle = car.AddComponent<Obstacle>();
-        obstacle.sourcePrefab = entry.prefab;
+        obstacle.sourcePrefab = prefab;
         Bounds b = CarVisual.LocalBounds(car);
+        obstacle.length = b.size.z;
         var box = car.AddComponent<BoxCollider>();
         box.isTrigger = true;
         box.center = b.center;
-        box.size = new Vector3(b.size.x * 0.85f, b.size.y, b.size.z * 0.9f);
+        box.size = new Vector3(b.size.x * 0.85f, b.size.y, b.size.z * 0.92f);
         return car;
     }
 

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ba10098bcfbc3d48a04e3c98993f6e2, type: 3}
+  m_Name: TrafficCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::TrafficCatalog
+  scale: 1.15
+  maxWidth: 2.9
+  vehicles:
+  - prefab: {fileID: 7769690492283750692, guid: f40e52a0c26735a46b681671fb2baa40, type: 3}
+    weight: 3
+  - prefab: {fileID: 8160049463398649625, guid: 66f97e68ed002b74f8e181d1c3108e14, type: 3}
+    weight: 3
+  - prefab: {fileID: 8663673574762740106, guid: 3f83a5a9639ce0249ac0d7df9b8c40b9, type: 3}
+    weight: 2
+  - prefab: {fileID: 9181701585240893179, guid: 350735ef3b951a54ba6ec49c663c667e, type: 3}
+    weight: 2
+  - prefab: {fileID: 6452039197999972492, guid: 813df9801c30e63479934f054db68d12, type: 3}
+    weight: 1
+  - prefab: {fileID: 8924721617483827851, guid: 50bc8a305f45f224abedbbaaa3046911, type: 3}
+    weight: 1
+  - prefab: {fileID: 2634900756195477355, guid: a107403662659584f9413d0a586f375c, type: 3}
+    weight: 1
+  - prefab: {fileID: 9189002782948893723, guid: bf49b486ffae2c2429b4fd41e96023c3, type: 3}
+    weight: 1

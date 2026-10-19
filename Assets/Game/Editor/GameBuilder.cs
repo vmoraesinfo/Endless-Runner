@@ -54,6 +54,7 @@ public static class GameBuilder
 
         var mats = BuildMaterials();
         BuildAdsSettings();
+        BuildTrafficCatalog();
         var coin = BuildCoinPrefab(mats);
         var pickups = new[] { BuildMagnetPrefab(mats), BuildShieldPrefab(mats) };
         var segment = BuildRoadSegmentPrefab(mats);
@@ -231,6 +232,28 @@ public static class GameBuilder
         }
         prop.SetValue(gma, AdMobAppId);
         EditorUtility.SetDirty(gma);
+    }
+
+    // Veículos do trânsito (pack "FREE Cartoon Car Pack"). Peso = chance relativa de aparecer.
+    static readonly (string name, float weight)[] TrafficVehicles =
+    {
+        ("Hatchback", 3f), ("Taxi", 3f), ("Pickup", 2f), ("Van", 2f),
+        ("Police", 1f), ("Towtruck", 1f), ("VanBig", 1f), ("Truck", 1f),
+    };
+
+    static void BuildTrafficCatalog()
+    {
+        var catalog = LoadOrCreate<TrafficCatalog>(ResDir + "/TrafficCatalog.asset");
+        catalog.vehicles.Clear();
+        foreach (var (name, weight) in TrafficVehicles)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Pack_FREE_Cars/Prefabs/{name}.prefab");
+            if (prefab == null) { Debug.LogWarning($"[GameBuilder] Veículo de trânsito não encontrado: {name}"); continue; }
+            catalog.vehicles.Add(new TrafficCatalog.Entry { prefab = prefab, weight = weight });
+        }
+        if (catalog.vehicles.Count == 0)
+            Debug.LogError("[GameBuilder] Nenhum veículo de trânsito — importe o FREE Cartoon Car Pack.");
+        EditorUtility.SetDirty(catalog);
     }
 
     // ---------------------------------------------------------------- prefabs

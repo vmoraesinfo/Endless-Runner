@@ -6,32 +6,54 @@ using UnityEngine;
 /// </summary>
 public static class CarVisual
 {
+    /// <summary>Carro com comprimento fixo (carros do jogador, que vêm de packs com escalas diferentes).</summary>
     public static GameObject Spawn(GameObject prefab, Transform parent, float targetLength)
+    {
+        var root = Instantiate(prefab, parent, out var model);
+        Bounds b = WorldBounds(model);
+        model.transform.localScale *= targetLength / Mathf.Max(b.size.z, 0.01f);
+        Ground(root, model);
+        return root;
+    }
+
+    /// <summary>Veículo com escala fixa, mantendo a proporção real (trânsito), limitado a uma largura máxima.</summary>
+    public static GameObject SpawnScaled(GameObject prefab, Transform parent, float scale, float maxWidth)
+    {
+        var root = Instantiate(prefab, parent, out var model);
+        Bounds b = WorldBounds(model);
+        float width = b.size.x * scale;
+        if (width > maxWidth) scale *= maxWidth / width;
+        model.transform.localScale *= scale;
+        Ground(root, model);
+        return root;
+    }
+
+    static GameObject Instantiate(GameObject prefab, Transform parent, out GameObject model)
     {
         var root = new GameObject(prefab.name);
         root.transform.SetParent(parent, false);
 
-        var model = Object.Instantiate(prefab, root.transform);
+        model = Object.Instantiate(prefab, root.transform);
         model.transform.localPosition = Vector3.zero;
         model.transform.localRotation = Quaternion.identity;
 
-        // Os prefabs do pack vêm sobre um disco de exposição ("Ground"); na pista ele não existe.
+        // Os prefabs do pack Low Poly Cars vêm sobre um disco de exposição ("Ground"); na pista ele não existe.
         foreach (var t in model.GetComponentsInChildren<Transform>(true))
         {
             if (t != null && t.name.StartsWith("Ground")) Object.DestroyImmediate(t.gameObject);
         }
         foreach (var rotator in model.GetComponentsInChildren<Rotator>()) Object.Destroy(rotator);
         foreach (var col in model.GetComponentsInChildren<Collider>()) Object.Destroy(col);
+        foreach (var rb in model.GetComponentsInChildren<Rigidbody>()) Object.Destroy(rb);
+        return root;
+    }
 
+    /// <summary>Apoia o modelo no chão e centraliza na origem do root.</summary>
+    static void Ground(GameObject root, GameObject model)
+    {
         Bounds b = WorldBounds(model);
-        float length = Mathf.Max(b.size.z, 0.01f);
-        float scale = targetLength / length;
-        model.transform.localScale *= scale;
-
-        b = WorldBounds(model);
         Vector3 offset = root.transform.position - new Vector3(b.center.x, b.min.y, b.center.z);
         model.transform.position += offset;
-        return root;
     }
 
     /// <summary>Caixa local (em relação a root) que envolve todos os renderers.</summary>
