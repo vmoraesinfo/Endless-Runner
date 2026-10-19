@@ -7,8 +7,8 @@ using UnityEngine;
 /// Ponto único de anúncios (Google AdMob). Cria-se sozinho na primeira chamada e sobrevive às trocas de cena.
 /// Fluxo: pede consentimento (formulário do Google, só aparece para quem precisa — ex.: Europa),
 /// inicializa o SDK e deixa intersticial e premiado sempre carregados.
-/// Fora do Android (editor) nada é carregado: o premiado é simulado e concede a recompensa na hora,
-/// para dar para testar o fluxo do jogo.
+/// No editor (Play) aparecem os anúncios de demonstração do próprio plugin do Google, com os blocos de teste.
+/// Em batchmode (teste automatizado) nada é carregado: o premiado é simulado e concede a recompensa na hora.
 /// </summary>
 public class AdsManager : MonoBehaviour
 {
@@ -26,7 +26,8 @@ public class AdsManager : MonoBehaviour
     Action pendingInterstitialClosed;
     bool rewardEarned;
 
-    static bool Live => Application.platform == RuntimePlatform.Android;
+    static bool Live => Application.platform == RuntimePlatform.Android || (Application.isEditor && !Application.isBatchMode);
+    static bool InEditor => Application.isEditor;
 
     public static AdsManager Instance
     {
@@ -52,7 +53,9 @@ public class AdsManager : MonoBehaviour
         MobileAds.RaiseAdEventsOnUnityMainThread = true;
         if (settings.testDeviceIds.Count > 0)
             MobileAds.SetRequestConfiguration(new RequestConfiguration { TestDeviceIds = settings.testDeviceIds });
-        GatherConsent();
+        // O formulário de consentimento só existe no aparelho; no editor inicializa direto.
+        if (InEditor) InitializeSdk();
+        else GatherConsent();
     }
 
     // ---------- Consentimento (UMP) + inicialização ----------
@@ -115,11 +118,11 @@ public class AdsManager : MonoBehaviour
 
     /// <summary>Precisa mostrar o botão "Privacidade" (obrigatório para usuários da Europa).</summary>
     public bool PrivacyOptionsRequired =>
-        Live && ConsentInformation.PrivacyOptionsRequirementStatus == PrivacyOptionsRequirementStatus.Required;
+        Live && !InEditor && ConsentInformation.PrivacyOptionsRequirementStatus == PrivacyOptionsRequirementStatus.Required;
 
     public void ShowPrivacyOptions()
     {
-        if (!Live) return;
+        if (!Live || InEditor) return;
         ConsentForm.ShowPrivacyOptionsForm(error =>
         {
             if (error != null) Debug.LogWarning("[Ads] Privacidade: " + error.Message);
