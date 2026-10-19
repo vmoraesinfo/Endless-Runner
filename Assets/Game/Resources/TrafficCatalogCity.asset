@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b99eba93d59a27d418fb0dcd1fb9f7cd, type: 3}
+  m_Name: TrafficCatalogCity
+  m_EditorClassIdentifier: Assembly-CSharp::TrafficCatalog
+  scale: 0.9
+  maxWidth: 2.6
+  vehicles:
+  - prefab: {fileID: 1220109061593607075, guid: e1d32747d09c9db4ebaeb409cbf1a9d1, type: 3}
+    weight: 2
+  - prefab: {fileID: 3592177867728365202, guid: fc9e91eb22879f84eac056473c581b5b, type: 3}
+    weight: 2
+  - prefab: {fileID: 800097039903430001, guid: 8b8dfbf784f51fe488952ff9b6004d4a, type: 3}
+    weight: 2
+  - prefab: {fileID: 6721311052883881255, guid: f59b89dd3a405be4f8c5d373aa147948, type: 3}
+    weight: 2
+  - prefab: {fileID: 816428196210802057, guid: 5f791b112f181e74784456343b4aa5ec, type: 3}
+    weight: 2
+  - prefab: {fileID: 2035264757950506384, guid: 88de85f09c1e22846aea38938bc9fabf, type: 3}
+    weight: 2
+  - prefab: {fileID: 4304101046722780987, guid: e19078d0cac14bf47a4b41dd8b21442d, type: 3}
+    weight: 2
+  - prefab: {fileID: 4122504736164611588, guid: 9dce1e39a16300c449250e82a5c0de0e, type: 3}
+    weight: 2
+  - prefab: {fileID: 4919208424876126901, guid: 435ae831f8edd784ebf701f5cfb58d60, type: 3}
+    weight: 2
+  - prefab: {fileID: 2102204373591914974, guid: c113180fba5d60d419f8e84af96f8306, type: 3}
+    weight: 4
+  - prefab: {fileID: 1412363122834768907, guid: c2950abe12173684f8fb76d8cd3ed1b3, type: 3}
+    weight: 1
+  - prefab: {fileID: 2908944898091809559, guid: 8d1af90125950e342999c5dbdefdd676, type: 3}
+    weight: 1
+  - prefab: {fileID: 7235495544061757970, guid: 3579b6a191a6262488eca857742b994d, type: 3}
+    weight: 0.5
+  - prefab: {fileID: 3294435270369087206, guid: 7982fc080c354a942b3561f445489e11, type: 3}
+    weight: 1
+  - prefab: {fileID: 8402656159568870331, guid: cd139aa5bd62b5b458ece3376c0955ff, type: 3}
+    weight: 1
+  - prefab: {fileID: 4460023217449692128, guid: 16e5566b784ba1c40bc0e9fe3306319c, type: 3}
+    weight: 1
+  - prefab: {fileID: 4760081433214567601, guid: d754c2ea8f00ac642b74fa7820389a10, type: 3}
+    weight: 1
+  - prefab: {fileID: 6533565179557477978, guid: e763c94fdee57994b8cd4b404275e989, type: 3}
+    weight: 1
+  - prefab: {fileID: 4123202338888435575, guid: ac4290ca0d7a0974ca41070b9891b77f, type: 3}
+    weight: 1
+  - prefab: {fileID: 6419671262868507204, guid: 0364cb90f8382f840bcbb80c4970ccae, type: 3}
+    weight: 1
+  - prefab: {fileID: 6535629527075169941, guid: b657a93bfb7890a4fa57df6180dc08cb, type: 3}
+    weight: 1
+  - prefab: {fileID: 1280414521145918320, guid: c46b09b837db5d546890e409caf769e6, type: 3}
+    weight: 1

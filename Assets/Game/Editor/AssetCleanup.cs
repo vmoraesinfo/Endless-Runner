@@ -15,7 +15,8 @@ public static class AssetCleanup
     static readonly string[] VendorFolders =
     {
         "Assets/KajamansRoads", "Assets/Low Poly Cars", "Assets/_Barking_Dog",
-        "Assets/TWD", "Assets/Pack_FREE_Cars",
+        "Assets/TWD", "Assets/Pack_FREE_Cars", "Assets/Awbmecreations", "Assets/Unity Technologies",
+        "Assets/Low Poly Simple Urban City 3D Asset Pack", "Assets/LowpolyStreetPack",
     };
 
     [MenuItem("Endless Runner/Report Unused Vendor Assets")]

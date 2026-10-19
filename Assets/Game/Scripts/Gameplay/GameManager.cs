@@ -12,6 +12,7 @@ public enum GameState { Ready, Running, Paused, GameOver }
 /// Raspões em sequência aumentam o multiplicador de pontos e enchem o nitro. Com o nitro cheio,
 /// swipe para cima: o carro acelera, fica invencível e arremessa o trânsito para longe.
 /// </summary>
+[DefaultExecutionOrder(-50)] // configura a pista antes do Awake/Start da estrada, trânsito e biomas
 public class GameManager : MonoBehaviour
 {
     public const string GarageScene = "CarChose";
@@ -23,6 +24,7 @@ public class GameManager : MonoBehaviour
     public TrafficSpawner traffic;
     public CameraFollow cameraFollow;
     public BiomeManager biomes;
+    public TrackGenerator track;
     public GameUI ui;
     public ParticleSystem crashEffect;
     public ParticleSystem coinEffect;
@@ -94,8 +96,23 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        ApplyMap();
         Time.timeScale = 1f;
         Application.targetFrameRate = 60;
+    }
+
+    /// <summary>Pista desta corrida (null se o catálogo de pistas não existir).</summary>
+    public MapCatalog.Map Map { get; private set; }
+
+    /// <summary>Troca cenário, trânsito e paleta conforme a pista escolhida na garagem.</summary>
+    void ApplyMap()
+    {
+        var catalog = MapCatalog.Load();
+        if (catalog == null || catalog.Count == 0) return;
+        Map = catalog.Get(catalog.SelectedIndex);
+        if (track != null && Map.segmentPrefab != null) track.segmentPrefab = Map.segmentPrefab;
+        if (traffic != null) traffic.Configure(Map);
+        if (biomes != null && Map.biomes != null && Map.biomes.Length > 0) biomes.biomes = Map.biomes;
     }
 
     void OnDestroy()
@@ -248,7 +265,7 @@ public class GameManager : MonoBehaviour
     public void CollectCoin(Coin coin)
     {
         if (State != GameState.Running) return;
-        RunCoins++;
+        RunCoins += Map != null ? Mathf.Max(1, Map.coinValue) : 1;
         coinStreak++;
         if (!NitroActive) Nitro01 = Mathf.Min(1f, Nitro01 + nitroPerCoin);
         if (coinEffect != null)
@@ -355,6 +372,7 @@ public class GameManager : MonoBehaviour
 
         int best = SaveData.BestScore;
         bool newBest = Score > best;
+        if (Map != null) SaveData.ReportDistance(Map.id, Mathf.FloorToInt(Distance));
         if (newBest) SaveData.BestScore = Score;
         BankCoins();
         ReportProgress();

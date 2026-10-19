@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecd5dff1f3f94422bd46bc57b78768c7, type: 3}
+  m_Name: MapCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::MapCatalog
+  maps:
+  - id: rodovia
+    displayName: RODOVIA
+    unlockDistance: 0
+    coinValue: 1
+    segmentPrefab: {fileID: 456445731589546473, guid: e00228aa135ca094f9ccd3e7d612cc00, type: 3}
+    biomes: []
+    traffic: {fileID: 11400000, guid: 11de131a201a0074db05aebde119c15a, type: 2}
+    trafficSpeed: 6
+    laneChangeChance: 0.35
+    roadworksChance: 0
+    roadworkPrefabs: []
+  - id: cidade
+    displayName: CIDADE
+    unlockDistance: 1500
+    coinValue: 2
+    segmentPrefab: {fileID: 5882089522317521872, guid: f1c71ba2445cae74db1caa2efc6c1ccf, type: 3}
+    biomes:
+    - name: CIDADE
+      sky: {r: 0.66, g: 0.8, b: 0.93, a: 1}
+      ground: {r: 1, g: 1, b: 1, a: 1}
+      groundTexture: 0
+      leaves: {r: 0.36, g: 0.62, b: 0.3, a: 1}
+      leavesDark: {r: 0.2, g: 0.45, b: 0.28, a: 1}
+      light: {r: 1, g: 1, b: 1, a: 1}
+      lightIntensity: 1.3
+      ambient: {r: 0.7, g: 0.75, b: 0.85, a: 1}
+    - name: ENTARDECER
+      sky: {r: 0.98, g: 0.66, b: 0.45, a: 1}
+      ground: {r: 1, g: 1, b: 1, a: 1}
+      groundTexture: 0
+      leaves: {r: 0.45, g: 0.55, b: 0.3, a: 1}
+      leavesDark: {r: 0.3, g: 0.4, b: 0.25, a: 1}
+      light: {r: 1, g: 0.75, b: 0.55, a: 1}
+      lightIntensity: 1.1
+      ambient: {r: 0.8, g: 0.6, b: 0.55, a: 1}
+    - name: "CIDADE \xC0 NOITE"
+      sky: {r: 0.08, g: 0.09, b: 0.2, a: 1}
+      ground: {r: 1, g: 1, b: 1, a: 1}
+      groundTexture: 0
+      leaves: {r: 0.1, g: 0.25, b: 0.18, a: 1}
+      leavesDark: {r: 0.06, g: 0.18, b: 0.14, a: 1}
+      light: {r: 0.6, g: 0.65, b: 1, a: 1}
+      lightIntensity: 0.5
+      ambient: {r: 0.3, g: 0.32, b: 0.5, a: 1}
+    traffic: {fileID: 11400000, guid: f03b2af0b4a35c547b2846dc3b7dce73, type: 2}
+    trafficSpeed: 0
+    laneChangeChance: 0.3
+    roadworksChance: 0.3
+    roadworkPrefabs:
+    - {fileID: 2890537849192912991, guid: e2c38d26191c3804c8e50b4fe7199d62, type: 3}
+    - {fileID: 824470856869861341, guid: d89b06414193b4243a406eb7015d3ee0, type: 3}
+    - {fileID: 6539191881129363281, guid: 423801351bbb7724fbf90f06ac9a8283, type: 3}

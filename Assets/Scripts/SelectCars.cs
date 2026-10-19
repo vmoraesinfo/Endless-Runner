@@ -23,13 +23,18 @@ public class SelectCars : MonoBehaviour
     public TMP_Text actionButtonText;
     public Button actionButton;
     public GameObject lockedBadge;
+    public TMP_Text mapText;
 
     CarCatalog catalog;
+    MapCatalog maps;
+    int mapIndex;
 
     void Start()
     {
         Time.timeScale = 1f;
         catalog = CarCatalog.Load();
+        maps = MapCatalog.Load();
+        if (maps != null) mapIndex = maps.SelectedIndex;
         Cars = GetAllChildren(carHolder);
         if (Cars.Count == 0) return;
         carIndex = Mathf.Clamp(SaveData.SelectedCar, 0, Cars.Count - 1);
@@ -51,11 +56,25 @@ public class SelectCars : MonoBehaviour
         DisplayCars();
     }
 
+    /// <summary>Alterna a pista. Pistas bloqueadas aparecem com o requisito, mas não dá para jogar nelas.</summary>
+    public void NextMap()
+    {
+        if (maps == null || maps.Count == 0) return;
+        mapIndex = (mapIndex + 1) % maps.Count;
+        if (maps.IsUnlocked(mapIndex)) SaveData.SelectedMap = mapIndex;
+        Sfx.I.Click();
+        RefreshUI();
+    }
+
+    bool MapLocked => maps != null && !maps.IsUnlocked(mapIndex);
+
     /// <summary>Botão principal: joga com o carro se já for dele, ou tenta comprar.</summary>
     public void OnActionButton()
     {
         var entry = catalog.Get(carIndex);
-        if (SaveData.IsCarUnlocked(carIndex, entry.price))
+        bool owned = SaveData.IsCarUnlocked(carIndex, entry.price);
+        if (owned && MapLocked) return; // botão fica desativado; proteção extra para não cobrar de novo
+        if (owned)
         {
             SaveData.SelectedCar = carIndex;
             AdsManager.Instance.HideBanner();
@@ -91,7 +110,21 @@ public class SelectCars : MonoBehaviour
         bestText.text = SaveData.BestScore > 0 ? $"RECORDE: {SaveData.BestScore:N0} pts" : "";
         lockedBadge.SetActive(!unlocked);
 
-        if (unlocked)
+        if (mapText != null && maps != null && maps.Count > 0)
+        {
+            var map = maps.Get(mapIndex);
+            string bonus = map.coinValue > 1 ? $"  (moedas x{map.coinValue})" : "";
+            mapText.text = MapLocked
+                ? $"{map.displayName}: FAÇA {map.unlockDistance} m NA {maps.Get(mapIndex - 1).displayName}"
+                : $"PISTA: {map.displayName}{bonus}";
+        }
+
+        if (unlocked && MapLocked)
+        {
+            actionButtonText.text = "PISTA BLOQUEADA";
+            actionButton.interactable = false;
+        }
+        else if (unlocked)
         {
             actionButtonText.text = "JOGAR";
             actionButton.interactable = true;

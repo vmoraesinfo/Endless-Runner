@@ -17,7 +17,7 @@ using UnityEngine.UI;
 /// e a interface da garagem (CarChose). Pode ser rodado de novo a qualquer momento:
 /// menu "Endless Runner/Rebuild Everything" ou via linha de comando (-executeMethod GameBuilder.BuildAll).
 /// </summary>
-public static class GameBuilder
+public static partial class GameBuilder
 {
     const string Root = "Assets/Game";
     const string MatDir = Root + "/Materials";
@@ -58,6 +58,8 @@ public static class GameBuilder
         var coin = BuildCoinPrefab(mats);
         var pickups = new[] { BuildMagnetPrefab(mats), BuildShieldPrefab(mats) };
         var segment = BuildRoadSegmentPrefab(mats);
+        var citySegment = BuildCitySegment(mats);
+        BuildMapCatalog(segment, citySegment, BuildRoadworks());
         BuildGarage();
         BuildGameScene(mats, coin, segment, pickups);
         ConfigureProject();
@@ -433,9 +435,10 @@ public static class GameBuilder
                 Debug.LogWarning($"[GameBuilder] {child.name} não é instância de prefab; ignorado no catálogo.");
                 continue;
             }
-            int price = oldPrices.TryGetValue(prefab, out var p) ? p : Prices[Mathf.Min(i, Prices.Length - 1)];
+            var info = GarageInfo(prefab);
+            int price = info?.price ?? (oldPrices.TryGetValue(prefab, out var p) ? p : Prices[Mathf.Min(i, Prices.Length - 1)]);
             if (i == 0) price = 0;
-            catalog.cars.Add(new CarCatalog.Entry { displayName = prefab.name, prefab = prefab, price = price });
+            catalog.cars.Add(new CarCatalog.Entry { displayName = info?.name ?? prefab.name, prefab = prefab, price = price });
             i++;
         }
         EditorUtility.SetDirty(catalog);
@@ -456,6 +459,7 @@ public static class GameBuilder
                 GameObjectUtility.RemoveMonoBehavioursWithMissingScript(t.gameObject);
 
         var select = Object.FindFirstObjectByType<SelectCars>(FindObjectsInactive.Include);
+        AddGarageCars(select.carHolder.transform);
         BuildCatalog(select.carHolder.transform);
 
         // A câmera visível da garagem é a de maior depth. Foi enquadrada em paisagem;
@@ -493,6 +497,7 @@ public static class GameBuilder
         var action = Button(ui, "ActionButton", "JOGAR", Green, new Vector2(0.5f, 0), new Vector2(0, 330), new Vector2(640, 180), 72, select.OnActionButton);
         select.actionButton = action;
         select.actionButtonText = action.GetComponentInChildren<TMP_Text>();
+        AddMapButton(ui, select);
 
         BuildGarageMenus(canvas.transform, ui, select);
 
@@ -708,6 +713,7 @@ public static class GameBuilder
         traffic.player = player;
         traffic.coinPrefab = coinPrefab;
         traffic.pickupPrefabs = pickups;
+        traffic.blinkerMaterial = Mat("Blinker", new Color(1f, 0.6f, 0.1f), null, null, null, 0.3f, 0f, new Color(3f, 1.4f, 0.1f));
 
         var biomes = new GameObject("Biomes").AddComponent<BiomeManager>();
         biomes.track = track.transform;
@@ -730,6 +736,7 @@ public static class GameBuilder
         gm.crashEffect = crash;
         gm.coinEffect = coinFx;
         gm.biomes = biomes;
+        gm.track = track;
 
         gm.ui = BuildGameUI(gm);
 

@@ -8,6 +8,9 @@ using Random = UnityEngine.Random;
 /// Gera "fileiras" de trânsito à frente do jogador. Cada fileira bloqueia 1 ou 2 faixas (nunca as 3)
 /// e pode trazer uma linha de moedas ou um power-up numa faixa livre. Todas as fileiras andam na mesma
 /// velocidade, então o espaço entre elas nunca diminui e o caminho continua sempre possível.
+///
+/// Variações por pista (MapCatalog): carros que ligam o pisca e trocam de faixa perto do jogador,
+/// e obras (cones/barreiras) que fecham faixas — só em pistas com trânsito parado, para manter o espaçamento.
 /// </summary>
 public class TrafficSpawner : MonoBehaviour
 {
@@ -22,12 +25,19 @@ public class TrafficSpawner : MonoBehaviour
         public readonly List<GameObject> coins = new List<GameObject>();
         public readonly List<Pickup> pickups = new List<Pickup>();
         public float Z => root.position.z;
+
+        // Troca de faixa: 0 = nenhuma, 1 = esperando, 2 = piscando, 3 = mudando, 4 = concluída.
+        public int changeState;
+        public GameObject changer;
+        public int fromLane, toLane;
+        public float changeTime;
     }
 
     [Header("Referências")]
     public PlayerController player;
     public GameObject coinPrefab;
     public Pickup[] pickupPrefabs;
+    public Material blinkerMaterial;
 
     [Header("Trânsito")]
     public float trafficSpeed = 6f;
@@ -43,6 +53,18 @@ public class TrafficSpawner : MonoBehaviour
     public float reactionTimeHard = 0.75f;
     public float twoLaneChanceEasy = 0.15f;
     public float twoLaneChanceHard = 0.6f;
+
+    [Header("Troca de faixa (pisca-pisca)")]
+    [Range(0f, 1f)] public float laneChangeChance;
+    [Tooltip("Segundos antes de o jogador chegar em que o pisca acende.")]
+    public float signalLeadTime = 2.1f;
+    [Tooltip("Segundos antes de o jogador chegar em que o carro começa a mudar de faixa.")]
+    public float moveLeadTime = 1.35f;
+    public float laneChangeDuration = 0.5f;
+
+    [Header("Obras")]
+    [Range(0f, 1f)] public float roadworksChance;
+    public GameObject[] roadworkPrefabs;
 
     [Header("Moedas e power-ups")]
     [Range(0f, 1f)] public float coinLineChance = 0.55f;
@@ -61,14 +83,28 @@ public class TrafficSpawner : MonoBehaviour
     int lastFreeLane = 1;
 
     public IReadOnlyList<Row> Rows => rows;
+    /// <summary>Contadores para o teste automatizado.</summary>
+    public int LaneChangesStarted { get; private set; }
+    public int RoadworksSpawned { get; private set; }
+    bool StaticTraffic => trafficSpeed <= 0.01f;
+
+    /// <summary>Aplica as regras da pista escolhida. Chamado pelo GameManager antes do Awake deste componente.</summary>
+    public void Configure(MapCatalog.Map map)
+    {
+        if (map.traffic != null) traffic = map.traffic;
+        trafficSpeed = map.trafficSpeed;
+        laneChangeChance = map.laneChangeChance;
+        roadworksChance = map.roadworksChance;
+        roadworkPrefabs = map.roadworkPrefabs;
+    }
 
     void Awake()
     {
-        traffic = TrafficCatalog.Load();
+        if (traffic == null) traffic = TrafficCatalog.Load();
         if (traffic == null || traffic.vehicles.Count == 0)
         {
             // Sem catálogo de trânsito a corrida ficaria vazia; usa os carros da garagem para não quebrar.
-            Debug.LogError("[TrafficSpawner] Resources/TrafficCatalog não carregou; usando os carros da garagem como trânsito.");
+            Debug.LogError("[TrafficSpawner] Catálogo de trânsito não carregou; usando os carros da garagem como trânsito.");
             traffic = ScriptableObject.CreateInstance<TrafficCatalog>();
             foreach (var car in CarCatalog.Load().cars)
                 traffic.vehicles.Add(new TrafficCatalog.Entry { prefab = car.prefab, weight = 1f });
@@ -83,9 +119,12 @@ public class TrafficSpawner : MonoBehaviour
 
         float playerZ = player.transform.position.z;
         float playerX = player.transform.position.x;
+        float relSpeed = Mathf.Max(playerSpeed - trafficSpeed, 6f);
+
         for (int i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
+            if (row.changeState > 0 && row.changeState < 4) UpdateLaneChange(row, (row.Z - playerZ) / relSpeed);
             if (row.passed || row.Z > playerZ) continue;
             row.passed = true;
             float minDx = float.MaxValue;
@@ -98,7 +137,6 @@ public class TrafficSpawner : MonoBehaviour
             if (rows[i].Z < playerZ - despawnBehind) Recycle(i);
         }
 
-        float relSpeed = Mathf.Max(playerSpeed - trafficSpeed, 6f);
         float reaction = Mathf.Lerp(reactionTimeEasy, reactionTimeHard, difficulty);
         while (rows.Count == 0 || rows[rows.Count - 1].Z < playerZ + spawnAhead)
             SpawnRow(playerZ, relSpeed, reaction, difficulty);
@@ -110,6 +148,8 @@ public class TrafficSpawner : MonoBehaviour
         row.root.SetParent(transform, false);
         row.root.gameObject.SetActive(true);
         row.passed = false;
+        row.changeState = 0;
+        row.changer = null;
 
         int lanes = PlayerController.LaneCount;
         float twoChance = Mathf.Lerp(twoLaneChanceEasy, twoLaneChanceHard, difficulty);
@@ -127,19 +167,40 @@ public class TrafficSpawner : MonoBehaviour
             candidates.RemoveAt(pick);
         }
 
+        // Obras só com trânsito parado: barreiras não podem andar junto com os carros.
+        bool roadworks = StaticTraffic && roadworkPrefabs != null && roadworkPrefabs.Length > 0
+                         && Random.value < roadworksChance * Mathf.Lerp(0.5f, 1f, difficulty);
+
         // Escolhe os veículos antes de posicionar: caminhões compridos pedem mais espaço até a fileira anterior.
         row.length = carLength;
+        if (roadworks) RoadworksSpawned++;
         for (int l = 0; l < lanes; l++)
         {
             if (!row.blocked[l]) continue;
-            var car = TakeCar();
+            var prefab = roadworks ? roadworkPrefabs[Random.Range(0, roadworkPrefabs.Length)] : traffic.PickRandom();
+            var car = TakeObstacle(prefab);
             car.transform.SetParent(row.root, false);
-            // Pequena variação de posição deixa o trânsito menos "em grade".
-            car.transform.localPosition = new Vector3(player.LaneX(l), 0f, Random.Range(-1.5f, 1.5f));
+            // Pequena variação de posição deixa o trânsito menos "em grade" (obras ficam alinhadas).
+            car.transform.localPosition = new Vector3(player.LaneX(l), 0f, roadworks ? 0f : Random.Range(-1.5f, 1.5f));
             car.transform.localRotation = Quaternion.identity;
             car.SetActive(true);
             row.cars.Add(car);
             row.length = Mathf.Max(row.length, car.GetComponent<Obstacle>().length + 3f);
+        }
+
+        // Carro sozinho na fileira pode ligar o pisca e mudar para uma faixa vizinha livre.
+        if (!roadworks && row.cars.Count == 1 && Random.value < laneChangeChance * Mathf.Lerp(0.4f, 1f, difficulty))
+        {
+            int from = 0;
+            for (int l = 0; l < lanes; l++) if (row.blocked[l]) from = l;
+            var options = new List<int>();
+            if (from > 0) options.Add(from - 1);
+            if (from < lanes - 1) options.Add(from + 1);
+            row.changer = row.cars[0];
+            row.fromLane = from;
+            row.toLane = options[Random.Range(0, options.Count)];
+            row.changeState = 1;
+            LaneChangesStarted++;
         }
 
         // Distância centro a centro = tempo de reação + metade de cada fileira.
@@ -153,12 +214,20 @@ public class TrafficSpawner : MonoBehaviour
         {
             var prev = rows[rows.Count - 1];
             gap = Mathf.Max(minGap, relSpeed * reaction + (prev.length + row.length) * 0.5f);
+            // Carro que vai trocar de faixa precisa de mais espaço: o jogador reage ao movimento dele.
+            if (row.changeState > 0) gap += relSpeed * 0.4f;
             row.root.position = new Vector3(0f, 0f, prev.Z + gap);
         }
         float prevHalf = rows.Count == 0 ? 0f : rows[rows.Count - 1].length * 0.5f;
 
-        // Faixa livre que dá para alcançar sem trocar de faixa, se possível.
+        // Faixa livre que dá para alcançar sem trocar de faixa, se possível (e que o carro do pisca não vai ocupar).
         int rewardLane = row.blocked[lastFreeLane] ? free : lastFreeLane;
+        if (row.changeState > 0 && rewardLane == row.toLane)
+        {
+            for (int l = 0; l < lanes; l++)
+                if (!row.blocked[l] && l != row.toLane) rewardLane = l;
+        }
+
         if (pickupPrefabs != null && pickupPrefabs.Length > 0 && Random.value < pickupChance)
         {
             var pickup = TakePickup(pickupPrefabs[Random.Range(0, pickupPrefabs.Length)]);
@@ -184,12 +253,48 @@ public class TrafficSpawner : MonoBehaviour
         }
 
         lastFreeLane = free;
+        if (row.changeState > 0 && lastFreeLane == row.toLane) lastFreeLane = rewardLane;
         rows.Add(row);
     }
 
-    GameObject TakeCar()
+    /// <summary>Pisca → muda de faixa → apaga o pisca, conforme o tempo até o jogador chegar na fileira.</summary>
+    void UpdateLaneChange(Row row, float timeToPlayer)
     {
-        var prefab = traffic.PickRandom();
+        var car = row.changer;
+        if (car == null || !row.cars.Contains(car)) { row.changeState = 4; return; }
+        var blinker = car.GetComponent<Blinker>();
+
+        if (row.changeState == 1 && timeToPlayer < signalLeadTime)
+        {
+            row.changeState = 2;
+            if (blinker != null) blinker.SetSide(row.toLane > row.fromLane ? 1 : -1);
+        }
+        if (row.changeState == 2 && timeToPlayer < moveLeadTime)
+        {
+            row.changeState = 3;
+            row.changeTime = 0f;
+            row.blocked[row.toLane] = true; // as duas faixas ficam bloqueadas durante a manobra
+        }
+        if (row.changeState == 3)
+        {
+            row.changeTime += Time.deltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, row.changeTime / laneChangeDuration);
+            var p = car.transform.localPosition;
+            p.x = Mathf.Lerp(player.LaneX(row.fromLane), player.LaneX(row.toLane), k);
+            car.transform.localPosition = p;
+            car.transform.localRotation = Quaternion.Euler(0f, Mathf.Sin(k * Mathf.PI) * 12f * Mathf.Sign(row.toLane - row.fromLane), 0f);
+            if (k >= 1f)
+            {
+                row.changeState = 4;
+                row.blocked[row.fromLane] = false;
+                car.transform.localRotation = Quaternion.identity;
+                if (blinker != null) blinker.SetSide(0);
+            }
+        }
+    }
+
+    GameObject TakeObstacle(GameObject prefab)
+    {
         if (!carPool.TryGetValue(prefab, out var stack))
         {
             stack = new Stack<GameObject>();
@@ -202,6 +307,14 @@ public class TrafficSpawner : MonoBehaviour
             return pooled;
         }
 
+        // Obras já vêm prontas do builder (com Obstacle e colisor); veículos são montados aqui.
+        if (prefab.GetComponent<Obstacle>() != null)
+        {
+            var work = Instantiate(prefab, transform);
+            work.GetComponent<Obstacle>().sourcePrefab = prefab;
+            return work;
+        }
+
         var car = CarVisual.SpawnScaled(prefab, transform, traffic.scale, traffic.maxWidth);
         var obstacle = car.AddComponent<Obstacle>();
         obstacle.sourcePrefab = prefab;
@@ -211,6 +324,7 @@ public class TrafficSpawner : MonoBehaviour
         box.isTrigger = true;
         box.center = b.center;
         box.size = new Vector3(b.size.x * 0.85f, b.size.y, b.size.z * 0.92f);
+        if (blinkerMaterial != null) Blinker.Attach(car, b, blinkerMaterial);
         return car;
     }
 
@@ -228,6 +342,9 @@ public class TrafficSpawner : MonoBehaviour
     {
         car.SetActive(false);
         car.transform.SetParent(transform, false);
+        car.transform.localRotation = Quaternion.identity;
+        var blinker = car.GetComponent<Blinker>();
+        if (blinker != null) blinker.SetSide(0);
         carPool[car.GetComponent<Obstacle>().sourcePrefab].Push(car);
     }
 
@@ -251,6 +368,8 @@ public class TrafficSpawner : MonoBehaviour
         row.cars.Clear();
         row.coins.Clear();
         row.pickups.Clear();
+        row.changer = null;
+        row.changeState = 0;
         row.root.gameObject.SetActive(false);
         rowPool.Push(row);
     }
@@ -321,7 +440,6 @@ public class TrafficSpawner : MonoBehaviour
             car.transform.Rotate(spin * dt, Space.World);
             yield return null;
         }
-        car.transform.rotation = Quaternion.identity;
         ReturnCar(car);
     }
 }

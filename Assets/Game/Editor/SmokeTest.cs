@@ -28,6 +28,12 @@ public static class SmokeTest
     static bool earlyShot;
     static bool garageLockedShot;
     static bool nitroShot;
+    static bool cityShot;
+    static int tourStep;
+    static readonly int[] TourCars = { 6, 10, 14, 15, 18, 22 };
+
+    static int CurrentCarIndex(SelectCars s) =>
+        (int)typeof(SelectCars).GetField("carIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(s);
     static Camera captureCam;
 
     static SmokeTest()
@@ -130,7 +136,16 @@ public static class SmokeTest
                     BeginCapture("03_garage_locked");
                     return;
                 }
-                s.PreviousCar();
+                // Passeio pela garagem: um carro de cada pack novo (confere tamanho e orientação).
+                if (tourStep < TourCars.Length)
+                {
+                    int target = TourCars[tourStep];
+                    while (CurrentCarIndex(s) != target) s.NextCar();
+                    BeginCapture($"03_garage_car{target:00}");
+                    tourStep++;
+                    return;
+                }
+                while (CurrentCarIndex(s) != 0) s.NextCar();
                 s.OnActionButton(); // carro 0 é grátis → carrega a cena Game
                 Next();
                 break;
@@ -219,6 +234,50 @@ public static class SmokeTest
             case 11:
                 gm.Resume();
                 if (gm.State != GameState.Running) Fail("Resume falhou");
+                Log($"Rodovia: {gm.traffic.LaneChangesStarted} carros trocaram de faixa (pisca), distância salva {SaveData.BestDistance("rodovia")} m");
+                if (gm.traffic.LaneChangesStarted == 0) Fail("Nenhum carro trocou de faixa na Rodovia");
+                // Libera a Cidade e recarrega a corrida nela.
+                var maps = MapCatalog.Load();
+                if (maps == null || maps.Count < 2) { Fail("MapCatalog sem a pista Cidade"); Finish(); return; }
+                if (maps.IsUnlocked(1) != (SaveData.BestDistance("rodovia") >= maps.Get(1).unlockDistance)) Fail("Regra de desbloqueio da Cidade inconsistente");
+                SaveData.ReportDistance("rodovia", 99999);
+                SaveData.SelectedMap = 1;
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Game");
+                Next();
+                break;
+
+            case 12: // Cidade: tela inicial
+                if (gm == null || gm.Map == null || gm.Map.id != "cidade" || StepTime < 3f) return;
+                BeginCapture("11_city_start");
+                Next();
+                break;
+
+            case 13:
+                pilot = gm.gameObject.AddComponent<AutoPilot>();
+                pilot.player = gm.player;
+                pilot.traffic = gm.traffic;
+                gm.StartRun();
+                cityShot = false;
+                Next();
+                break;
+
+            case 14: // 40 s na Cidade sem bater (obras + trânsito parado + pisca)
+                if (gm.State == GameState.GameOver)
+                {
+                    Fail($"AutoPilot bateu na Cidade aos {StepTime:F1}s ({gm.Distance:F0} m)");
+                    BeginCapture("13_city_crash");
+                    step = 15;
+                    return;
+                }
+                if (!cityShot && StepTime > 10f) { cityShot = true; BeginCapture("12_city_run"); return; }
+                if (StepTime < 40f) return;
+                Log($"Cidade 40s: {gm.Distance:F0} m, moedas {gm.RunCoins} (valem x{gm.Map.coinValue}), obras {gm.traffic.RoadworksSpawned}, piscas {gm.traffic.LaneChangesStarted}, raspões {gm.NearMisses}");
+                if (gm.traffic.RoadworksSpawned == 0) Fail("Nenhuma obra apareceu na Cidade");
+                BeginCapture("13_city_late");
+                step = 15;
+                break;
+
+            case 15:
                 Finish();
                 break;
         }

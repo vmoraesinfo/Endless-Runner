@@ -13,21 +13,72 @@ MonoBehaviour:
   m_Name: CarCatalog
   m_EditorClassIdentifier: Assembly-CSharp::CarCatalog
   cars:
-  - displayName: Sports Racing Car
+  - displayName: Esportivo Neon
     prefab: {fileID: 919132149155446097, guid: 4764f71eddbb8fe4c8ebb0aa56af0952, type: 3}
     price: 0
-  - displayName: Police Monster Truck
+  - displayName: "Monster Pol\xEDcia"
     prefab: {fileID: 919132149155446097, guid: eba77cdee1aa10442ad623acedc3c877, type: 3}
     price: 150
-  - displayName: Standard Racing Car
+  - displayName: Corrida
     prefab: {fileID: 919132149155446097, guid: f9d1db90fd363ff4cbe9c9cc9d695439, type: 3}
     price: 300
-  - displayName: Sports Monster Truck
+  - displayName: Monster Esportivo
     prefab: {fileID: 919132149155446097, guid: 6dc10478af126c548ab92dc709618527, type: 3}
     price: 500
-  - displayName: Standard Police Car
+  - displayName: Viatura
     prefab: {fileID: 919132149155446097, guid: 24d21c5cf9208c543bd85126192e33ed, type: 3}
     price: 800
-  - displayName: Super Police Car
+  - displayName: Super Viatura
     prefab: {fileID: 919132149155446097, guid: 64eaa361dd951ad44b88bdd70823d963, type: 3}
     price: 1200
+  - displayName: Hatch
+    prefab: {fileID: 793685457875359081, guid: 9c92406c14c380849bca38280c133c64, type: 3}
+    price: 1500
+  - displayName: "Cl\xE1ssico"
+    prefab: {fileID: 3786326439804512758, guid: f4e73d783d681e04ca355f6c8a50af8e, type: 3}
+    price: 1800
+  - displayName: Picape
+    prefab: {fileID: 3859950695711406603, guid: eb1d6cef4963f9948a2d46b477134dfb, type: 3}
+    price: 2200
+  - displayName: Van
+    prefab: {fileID: 745966575250574594, guid: 789bb11bfacf90443892854edcbb02f4, type: 3}
+    price: 2500
+  - displayName: Muscle
+    prefab: {fileID: 1718881139866272103, guid: d84787863a48b884e8c303159510c801, type: 3}
+    price: 3000
+  - displayName: Patrulha
+    prefab: {fileID: 2295116759664368373, guid: 69cdbe0692ba4624b9259fb58689f06d, type: 3}
+    price: 3500
+  - displayName: Esportivo GT
+    prefab: {fileID: 2922220883736789182, guid: 041e4e3100f07184cacfe35dce34f022, type: 3}
+    price: 4000
+  - displayName: Monster
+    prefab: {fileID: 7199546247579947592, guid: 8c0f502c596c3c746a68e5631858c360, type: 3}
+    price: 4500
+  - displayName: Blindado
+    prefab: {fileID: 3314894990512055167, guid: 24895160902fca14ebd21bad6edc37cf, type: 3}
+    price: 5000
+  - displayName: Muscle Laranja
+    prefab: {fileID: 4695957159649180562, guid: d8a38e887e96d694894a36eaf7ec145b, type: 3}
+    price: 6000
+  - displayName: Muscle Noturno
+    prefab: {fileID: 2672864514906475514, guid: 22c9c216bad815c41ab718efa15f912b, type: 3}
+    price: 7000
+  - displayName: Jipe
+    prefab: {fileID: 1900681226621404113, guid: 7e4d049e6a79539479a2e9e98c071bfe, type: 3}
+    price: 8000
+  - displayName: "Cl\xE1ssico Azul"
+    prefab: {fileID: 2749458917958626468, guid: 70b6b2f84042c5546b88956fe74b0c66, type: 3}
+    price: 9000
+  - displayName: GT Turbo
+    prefab: {fileID: 4849416383976443089, guid: 1d0173f883989e14493677c41ae5a073, type: 3}
+    price: 10000
+  - displayName: Hyper GT
+    prefab: {fileID: 864538881232866547, guid: a686086459191ea4994078fe68c2bf63, type: 3}
+    price: 12000
+  - displayName: Super V12
+    prefab: {fileID: 2270258410762528488, guid: 2eeca4fa75195b14d9063034a4d2c63f, type: 3}
+    price: 15000
+  - displayName: "F\xF3rmula"
+    prefab: {fileID: 2686982419682777703, guid: dc8c2427d4e766843b3b93ad9de149ba, type: 3}
+    price: 20000

@@ -36,6 +36,22 @@ public static class SaveData
         set { PlayerPrefs.SetInt(VibrationKey, value ? 1 : 0); PlayerPrefs.Save(); }
     }
 
+    public static int SelectedMap
+    {
+        get => PlayerPrefs.GetInt("selected_map", 0);
+        set { PlayerPrefs.SetInt("selected_map", value); PlayerPrefs.Save(); }
+    }
+
+    /// <summary>Maior distância (m) numa única corrida em cada pista; libera a pista seguinte.</summary>
+    public static int BestDistance(string mapId) => PlayerPrefs.GetInt("best_dist_" + mapId, 0);
+
+    public static void ReportDistance(string mapId, int meters)
+    {
+        if (meters <= BestDistance(mapId)) return;
+        PlayerPrefs.SetInt("best_dist_" + mapId, meters);
+        PlayerPrefs.Save();
+    }
+
     public static bool Sound
     {
         get => PlayerPrefs.GetInt("sound", 1) == 1;
