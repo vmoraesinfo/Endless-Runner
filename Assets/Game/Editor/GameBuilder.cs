@@ -205,13 +205,32 @@ public static class GameBuilder
         EditorUtility.SetDirty(mat);
     }
 
+    // IDs do AdMob (admob.google.com → Apps → Endless Runner).
+    const string AdMobAppId = "ca-app-pub-2144609610465059~5642913108";
+
     static void BuildAdsSettings()
     {
         var ads = LoadOrCreate<AdsSettings>(ResDir + "/AdsSettings.asset");
-        // Valores que já estavam no projeto (IronSourceMediationSettings e o antigo BannerSample.cs).
-        if (string.IsNullOrEmpty(ads.androidAppKey)) ads.androidAppKey = "231e0ef4d";
-        if (string.IsNullOrEmpty(ads.bannerAdUnitId)) ads.bannerAdUnitId = "1pox3ykjcdvt5p9y";
+        ads.androidAppId = AdMobAppId;
+        if (string.IsNullOrEmpty(ads.bannerAdUnitId) || !ads.bannerAdUnitId.StartsWith("ca-app-pub-"))
+            ads.bannerAdUnitId = "ca-app-pub-2144609610465059/7836588912";
+        if (string.IsNullOrEmpty(ads.interstitialAdUnitId)) ads.interstitialAdUnitId = "ca-app-pub-2144609610465059/3598880872";
+        if (string.IsNullOrEmpty(ads.rewardedAdUnitId)) ads.rewardedAdUnitId = "ca-app-pub-2144609610465059/7098222315";
         EditorUtility.SetDirty(ads);
+
+        // O plugin do Google lê o App ID do próprio asset de configurações; sem ele o app fecha ao abrir.
+        // A classe é internal no plugin, então é acessada por reflexão.
+        var type = System.Type.GetType("GoogleMobileAds.Editor.GoogleMobileAdsSettings, GoogleMobileAds.Editor");
+        var load = type?.GetMethod("LoadInstance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+        var gma = load?.Invoke(null, null) as ScriptableObject;
+        var prop = type?.GetProperty("GoogleMobileAdsAndroidAppId");
+        if (gma == null || prop == null)
+        {
+            Debug.LogError("[GameBuilder] Plugin Google Mobile Ads não encontrado; configure o App ID em Assets > Google Mobile Ads > Settings.");
+            return;
+        }
+        prop.SetValue(gma, AdMobAppId);
+        EditorUtility.SetDirty(gma);
     }
 
     // ---------------------------------------------------------------- prefabs
@@ -763,7 +782,7 @@ public static class GameBuilder
         var pause = Stretch(NewRect("PausePanel"), safe.parent);
         ui.pausePanel = pause.gameObject;
         pause.gameObject.AddComponent<Image>().color = Dim;
-        var pCard = Panel(pause, "Card", Card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(820, 1170));
+        var pCard = Panel(pause, "Card", Card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(820, 1330));
         Text(pCard, "Title", "PAUSADO", 90, TextAlignmentOptions.Center, Color.white, top, top, new Vector2(0, -110), new Vector2(760, 130));
         Button(pCard, "Resume", "CONTINUAR", Green, top, new Vector2(0, -300), new Vector2(620, 140), 56, gm.Resume);
         Button(pCard, "Restart", "REINICIAR", Blue, top, new Vector2(0, -470), new Vector2(620, 140), 56, gm.Restart);
@@ -772,6 +791,7 @@ public static class GameBuilder
         var vib = Button(pCard, "Vibration", "VIBRAÇÃO: LIGADA", Gray, top, new Vector2(0, -810), new Vector2(620, 140), 44, gm.ToggleVibration);
         ui.vibrationText = vib.GetComponentInChildren<TMP_Text>();
         Button(pCard, "Garage", "GARAGEM", Orange, top, new Vector2(0, -980), new Vector2(620, 140), 56, gm.GoToGarage);
+        ui.privacyButton = Button(pCard, "Privacy", "PRIVACIDADE", Gray, top, new Vector2(0, -1150), new Vector2(620, 120), 40, gm.ShowPrivacyOptions).gameObject;
 
         // Fim de jogo
         var over = Stretch(NewRect("GameOverPanel"), safe.parent);

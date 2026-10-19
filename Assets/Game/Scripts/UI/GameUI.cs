@@ -38,6 +38,7 @@ public class GameUI : MonoBehaviour
     [Header("Pausa")]
     public TMP_Text vibrationText;
     public TMP_Text soundText;
+    public GameObject privacyButton;
 
     [Header("Fim de jogo")]
     public TMP_Text goScoreText;
@@ -72,6 +73,8 @@ public class GameUI : MonoBehaviour
         SetOnly(pausePanel);
         vibrationText.text = vibration ? "VIBRAÇÃO: LIGADA" : "VIBRAÇÃO: DESLIGADA";
         soundText.text = sound ? "SOM: LIGADO" : "SOM: DESLIGADO";
+        // Só aparece para quem está em região que exige (ex.: Europa).
+        privacyButton.SetActive(AdsManager.Instance.PrivacyOptionsRequired);
     }
 
     public void ShowGameOver(GameOverInfo info)

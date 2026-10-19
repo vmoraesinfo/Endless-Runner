@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6542533d89240ce43bc40f6b09f70306, type: 3}
   m_Name: AdsSettings
   m_EditorClassIdentifier: Assembly-CSharp::AdsSettings
-  androidAppKey: 231e0ef4d
-  bannerAdUnitId: 1pox3ykjcdvt5p9y
-  interstitialAdUnitId: 
-  rewardedAdUnitId: 
+  androidAppId: ca-app-pub-2144609610465059~5642913108
+  bannerAdUnitId: ca-app-pub-2144609610465059/7836588912
+  interstitialAdUnitId: ca-app-pub-2144609610465059/3598880872
+  rewardedAdUnitId: ca-app-pub-2144609610465059/7098222315
   interstitialEveryNGameOvers: 3
-  debugValidateIntegration: 0
+  forceTestAds: 0
+  testDeviceIds: []

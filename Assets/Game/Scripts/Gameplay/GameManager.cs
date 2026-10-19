@@ -433,6 +433,8 @@ public class GameManager : MonoBehaviour
         ui.ShowPause(SaveData.Vibration, SaveData.Sound);
     }
 
+    public void ShowPrivacyOptions() => AdsManager.Instance.ShowPrivacyOptions();
+
     public void ToggleSound()
     {
         SaveData.Sound = !SaveData.Sound;

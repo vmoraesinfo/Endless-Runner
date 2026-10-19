@@ -1,10 +1,14 @@
 using System;
+using GoogleMobileAds.Api;
+using GoogleMobileAds.Ump.Api;
 using UnityEngine;
-using Unity.Services.LevelPlay;
 
 /// <summary>
-/// Ponto único de anúncios (LevelPlay). Cria-se sozinho na primeira chamada e sobrevive às trocas de cena.
-/// No editor os anúncios com recompensa são simulados (concedem a recompensa na hora) para dar para testar o fluxo.
+/// Ponto único de anúncios (Google AdMob). Cria-se sozinho na primeira chamada e sobrevive às trocas de cena.
+/// Fluxo: pede consentimento (formulário do Google, só aparece para quem precisa — ex.: Europa),
+/// inicializa o SDK e deixa intersticial e premiado sempre carregados.
+/// Fora do Android (editor) nada é carregado: o premiado é simulado e concede a recompensa na hora,
+/// para dar para testar o fluxo do jogo.
 /// </summary>
 public class AdsManager : MonoBehaviour
 {
@@ -12,15 +16,17 @@ public class AdsManager : MonoBehaviour
 
     AdsSettings settings;
     bool initialized;
-    LevelPlayBannerAd banner;
-    LevelPlayInterstitialAd interstitial;
-    LevelPlayRewardedAd rewarded;
+    int gameOvers;
+    bool bannerWanted;
+    BannerView banner;
+    InterstitialAd interstitial;
+    RewardedAd rewarded;
     Action pendingReward;
     Action pendingRewardClosed;
     Action pendingInterstitialClosed;
     bool rewardEarned;
-    int gameOvers;
-    bool bannerWanted;
+
+    static bool Live => Application.platform == RuntimePlatform.Android;
 
     public static AdsManager Instance
     {
@@ -40,46 +46,84 @@ public class AdsManager : MonoBehaviour
     {
         settings = Resources.Load<AdsSettings>("AdsSettings");
         if (settings == null) settings = ScriptableObject.CreateInstance<AdsSettings>();
-        Init();
+        if (!Live) return;
+
+        // Callbacks do SDK chegam na thread principal (pode mexer em UI/cena com segurança).
+        MobileAds.RaiseAdEventsOnUnityMainThread = true;
+        if (settings.testDeviceIds.Count > 0)
+            MobileAds.SetRequestConfiguration(new RequestConfiguration { TestDeviceIds = settings.testDeviceIds });
+        GatherConsent();
     }
 
-    void Init()
+    // ---------- Consentimento (UMP) + inicialização ----------
+
+    void GatherConsent()
     {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        if (string.IsNullOrEmpty(settings.androidAppKey))
+        var request = new ConsentRequestParameters { TagForUnderAgeOfConsent = false };
+        ConsentInformation.Update(request, updateError =>
         {
-            Debug.LogWarning("[Ads] androidAppKey vazio em AdsSettings; anúncios desativados.");
-            return;
-        }
-        LevelPlay.OnInitSuccess += _ => OnInitialized();
-        LevelPlay.OnInitFailed += error => Debug.LogWarning("[Ads] Falha ao iniciar LevelPlay: " + error);
-        LevelPlay.Init(settings.androidAppKey);
-#endif
+            if (updateError != null) Debug.LogWarning("[Ads] Consentimento: " + updateError.Message);
+            ConsentForm.LoadAndShowConsentFormIfRequired(showError =>
+            {
+                if (showError != null) Debug.LogWarning("[Ads] Formulário de consentimento: " + showError.Message);
+                if (ConsentInformation.CanRequestAds()) InitializeSdk();
+            });
+        });
+        // Quem já respondeu numa sessão anterior pode carregar anúncios sem esperar.
+        if (ConsentInformation.CanRequestAds()) InitializeSdk();
     }
 
-    void OnInitialized()
+    void InitializeSdk()
     {
+        if (initialized) return;
         initialized = true;
-        if (settings.debugValidateIntegration) LevelPlay.ValidateIntegration();
-
-        if (!string.IsNullOrEmpty(settings.interstitialAdUnitId))
+        MobileAds.Initialize(_ =>
         {
-            interstitial = new LevelPlayInterstitialAd(settings.interstitialAdUnitId);
-            interstitial.OnAdClosed += _ => FinishInterstitial();
-            interstitial.OnAdDisplayFailed += _ => FinishInterstitial();
-            interstitial.LoadAd();
-        }
+            LoadInterstitial();
+            LoadRewarded();
+            if (bannerWanted) ShowBanner();
+        });
+    }
 
-        if (!string.IsNullOrEmpty(settings.rewardedAdUnitId))
+    void LoadInterstitial()
+    {
+        if (string.IsNullOrEmpty(settings.Interstitial)) return;
+        interstitial?.Destroy();
+        interstitial = null;
+        InterstitialAd.Load(settings.Interstitial, new AdRequest(), (ad, error) =>
         {
-            rewarded = new LevelPlayRewardedAd(settings.rewardedAdUnitId);
-            rewarded.OnAdRewarded += (_, __) => rewardEarned = true;
-            rewarded.OnAdClosed += _ => FinishRewarded();
-            rewarded.OnAdDisplayFailed += _ => FinishRewarded();
-            rewarded.LoadAd();
-        }
+            if (error != null || ad == null) { Debug.LogWarning("[Ads] Intersticial não carregou: " + error); return; }
+            interstitial = ad;
+            ad.OnAdFullScreenContentClosed += FinishInterstitial;
+            ad.OnAdFullScreenContentFailed += _ => FinishInterstitial();
+        });
+    }
 
-        if (bannerWanted) ShowBanner();
+    void LoadRewarded()
+    {
+        if (string.IsNullOrEmpty(settings.Rewarded)) return;
+        rewarded?.Destroy();
+        rewarded = null;
+        RewardedAd.Load(settings.Rewarded, new AdRequest(), (ad, error) =>
+        {
+            if (error != null || ad == null) { Debug.LogWarning("[Ads] Premiado não carregou: " + error); return; }
+            rewarded = ad;
+            ad.OnAdFullScreenContentClosed += FinishRewarded;
+            ad.OnAdFullScreenContentFailed += _ => FinishRewarded();
+        });
+    }
+
+    /// <summary>Precisa mostrar o botão "Privacidade" (obrigatório para usuários da Europa).</summary>
+    public bool PrivacyOptionsRequired =>
+        Live && ConsentInformation.PrivacyOptionsRequirementStatus == PrivacyOptionsRequirementStatus.Required;
+
+    public void ShowPrivacyOptions()
+    {
+        if (!Live) return;
+        ConsentForm.ShowPrivacyOptionsForm(error =>
+        {
+            if (error != null) Debug.LogWarning("[Ads] Privacidade: " + error.Message);
+        });
     }
 
     // ---------- Banner ----------
@@ -87,61 +131,55 @@ public class AdsManager : MonoBehaviour
     public void ShowBanner()
     {
         bannerWanted = true;
-        if (!initialized || string.IsNullOrEmpty(settings.bannerAdUnitId)) return;
+        if (!initialized || string.IsNullOrEmpty(settings.Banner)) return;
         if (banner == null)
         {
-            // Posição padrão: rodapé centralizado (nunca no meio da tela — gera clique acidental).
-            banner = new LevelPlayBannerAd(settings.bannerAdUnitId, respectSafeArea: true);
-            banner.LoadAd();
+            // Rodapé centralizado (nunca no meio da tela — gera clique acidental).
+            banner = new BannerView(settings.Banner, AdSize.Banner, AdPosition.Bottom);
+            banner.LoadAd(new AdRequest());
         }
-        else banner.ShowAd();
+        else banner.Show();
     }
 
     public void HideBanner()
     {
         bannerWanted = false;
-        banner?.HideAd();
+        banner?.Hide();
     }
 
-    // ---------- Rewarded ----------
+    // ---------- Premiado ----------
 
-    public bool IsRewardedReady
-    {
-        get
-        {
-#if UNITY_EDITOR
-            return true;
-#else
-            return rewarded != null && rewarded.IsAdReady();
-#endif
-        }
-    }
+    public bool IsRewardedReady => !Live || (rewarded != null && rewarded.CanShowAd());
 
-    /// <summary>Mostra um anúncio com recompensa. onReward só é chamado se o jogador assistir até o fim.</summary>
+    /// <summary>Mostra um anúncio premiado. onReward só é chamado se o jogador assistir até o fim.</summary>
     public void ShowRewarded(Action onReward, Action onClosed = null)
     {
-#if UNITY_EDITOR
-        onReward?.Invoke();
-        onClosed?.Invoke();
-#else
+        if (!Live)
+        {
+            onReward?.Invoke();
+            onClosed?.Invoke();
+            return;
+        }
         if (!IsRewardedReady) { onClosed?.Invoke(); return; }
         pendingReward = onReward;
         pendingRewardClosed = onClosed;
         rewardEarned = false;
-        rewarded.ShowAd();
-#endif
+        rewarded.Show(_ => rewardEarned = true);
     }
 
     void FinishRewarded()
     {
-        if (rewardEarned) pendingReward?.Invoke();
-        pendingRewardClosed?.Invoke();
+        var reward = rewardEarned ? pendingReward : null;
+        var closed = pendingRewardClosed;
         pendingReward = null;
         pendingRewardClosed = null;
-        rewarded?.LoadAd();
+        rewardEarned = false;
+        reward?.Invoke();
+        closed?.Invoke();
+        LoadRewarded();
     }
 
-    // ---------- Interstitial ----------
+    // ---------- Intersticial ----------
 
     /// <summary>Conta uma partida encerrada e, a cada N, mostra um intersticial antes de continuar.</summary>
     public void OnGameOverThen(Action next)
@@ -149,20 +187,20 @@ public class AdsManager : MonoBehaviour
         gameOvers++;
         int every = settings.interstitialEveryNGameOvers;
         bool due = every > 0 && gameOvers % every == 0;
-        if (!due || interstitial == null || !interstitial.IsAdReady())
+        if (due && interstitial != null && interstitial.CanShowAd())
         {
-            next?.Invoke();
+            pendingInterstitialClosed = next;
+            interstitial.Show();
             return;
         }
-        pendingInterstitialClosed = next;
-        interstitial.ShowAd();
+        next?.Invoke();
     }
 
     void FinishInterstitial()
     {
         var next = pendingInterstitialClosed;
         pendingInterstitialClosed = null;
-        interstitial?.LoadAd();
+        LoadInterstitial();
         next?.Invoke();
     }
 }
