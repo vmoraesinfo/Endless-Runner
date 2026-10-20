@@ -44,3 +44,18 @@ crashlytics-build.properties
 Thumbs.db
 *.slnx
 .utmp/
+
+# Firebase: pacotes grandes (baixe com Tools/download-firebase.sh) e config do app
+Packages/firebase/*.tgz
+Assets/google-services.json
+Assets/google-services.json.meta
+Assets/StreamingAssets/google-services-desktop.json*
+# Gerados automaticamente pelo Firebase/EDM a cada build
+Assets/GeneratedLocalRepo/
+Assets/GeneratedLocalRepo.meta
+Assets/Plugins/Android/FirebaseApp.androidlib/
+Assets/Plugins/Android/FirebaseApp.androidlib.meta
+Assets/Plugins/Android/FirebaseCrashlytics.androidlib/
+Assets/Plugins/Android/FirebaseCrashlytics.androidlib.meta
+Assets/StreamingAssets/
+Assets/StreamingAssets.meta

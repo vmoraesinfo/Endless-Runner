@@ -133,7 +133,11 @@ public class GarageMenus : MonoBehaviour
 
     void Buy(UpgradeType type)
     {
-        if (Upgrades.TryBuy(type)) Sfx.I.PowerUp();
+        if (Upgrades.TryBuy(type))
+        {
+            Sfx.I.PowerUp();
+            Telemetry.Log("upgrade_bought", ("upgrade", type.ToString()), ("level", Upgrades.Level(type)));
+        }
         RefreshUpgrades();
         garage.RefreshUI();
     }
@@ -154,7 +158,9 @@ public class GarageMenus : MonoBehaviour
 
     public void ClaimDaily()
     {
+        int day = DailyReward.NextDay;
         DailyReward.Claim();
+        Telemetry.Log("daily_claimed", ("day", day));
         dailyPanel.SetActive(false);
         Sfx.I.PowerUp();
         garage.RefreshUI();
@@ -176,7 +182,13 @@ public class GarageMenus : MonoBehaviour
 
     public void Claim(int index)
     {
-        if (Missions.Claim(index) > 0) Sfx.I.PowerUp();
+        var type = Missions.Active[index].type;
+        int reward = Missions.Claim(index);
+        if (reward > 0)
+        {
+            Sfx.I.PowerUp();
+            Telemetry.Log("mission_claimed", ("mission", type.ToString()), ("reward", reward));
+        }
         RefreshMissions();
         garage.RefreshUI();
     }

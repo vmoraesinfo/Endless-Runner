@@ -53,6 +53,7 @@ public class SelectCars : MonoBehaviour
         AdsManager.Instance.ShowBanner();
         Music.PlayMenu();
         _ = Purchases.Instance; // conecta à loja cedo para restaurar "Remover anúncios"
+        Telemetry.Init();
     }
 
     public void NextCar()
@@ -99,6 +100,7 @@ public class SelectCars : MonoBehaviour
         {
             SaveData.UnlockCar(carIndex);
             SaveData.SelectedCar = carIndex;
+            Telemetry.Log("car_bought", ("car", entry.displayName), ("price", entry.price));
         }
         DisplayCars();
     }

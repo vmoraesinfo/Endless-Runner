@@ -41,6 +41,7 @@ public class PaintPicker : MonoBehaviour
         if (!garage.CurrentOwned) return;
         if (Paints.IsOwned(car, paint)) Paints.Select(car, paint);
         else if (!Paints.TryBuy(car, paint)) { label.text = $"FALTAM MOEDAS ({Paints.Price})"; return; }
+        else Telemetry.Log("paint_bought", ("car", car), ("paint", Paints.All[paint].name));
         Sfx.I.Click();
         CarPaint.Apply(garage.CurrentCarObject, Paints.Selected(car));
         garage.RefreshUI();

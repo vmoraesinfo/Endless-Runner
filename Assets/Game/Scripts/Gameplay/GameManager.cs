@@ -189,6 +189,7 @@ public class GameManager : MonoBehaviour
         player.InputEnabled = true;
         ui.ShowHud();
         Sfx.I.Click();
+        Telemetry.Log("run_start", ("map", Map?.id ?? "rodovia"), ("car", SaveData.SelectedCar));
     }
 
     // ---------- Raspão e combo ----------
@@ -379,7 +380,12 @@ public class GameManager : MonoBehaviour
 
         int best = SaveData.BestScore;
         bool newBest = Score > best;
+        var maps = MapCatalog.Load();
+        int lockedBefore = CountLockedMaps(maps);
         if (Map != null) SaveData.ReportDistance(Map.id, Mathf.FloorToInt(Distance));
+        if (CountLockedMaps(maps) < lockedBefore) Telemetry.Log("map_unlocked", ("from_map", Map?.id ?? ""));
+        Telemetry.Log("run_end", ("map", Map?.id ?? "rodovia"), ("score", Score), ("distance", Mathf.FloorToInt(Distance)),
+            ("coins", RunCoins), ("near_misses", NearMisses), ("nitros", NitrosUsed), ("revived", revived));
         if (newBest) SaveData.BestScore = Score;
         BankCoins();
         ReportProgress();
@@ -412,9 +418,18 @@ public class GameManager : MonoBehaviour
         AdsManager.Instance.ShowRewarded(DoRevive);
     }
 
+    static int CountLockedMaps(MapCatalog maps)
+    {
+        if (maps == null) return 0;
+        int n = 0;
+        for (int i = 0; i < maps.Count; i++) if (!maps.IsUnlocked(i)) n++;
+        return n;
+    }
+
     void DoRevive()
     {
         revived = true;
+        Telemetry.Log("revive", ("map", Map?.id ?? "rodovia"), ("distance", Mathf.FloorToInt(Distance)));
         traffic.ClearUntil(player.transform.position.z, clearDistanceOnRevive);
         BaseSpeed = Mathf.Max(startSpeed, speedBeforeCrash * 0.85f);
         invulnerableUntil = Time.time + invulnerableAfterRevive;
@@ -429,6 +444,7 @@ public class GameManager : MonoBehaviour
         AdsManager.Instance.ShowRewarded(() =>
         {
             doubled = true;
+            Telemetry.Log("double_coins", ("coins", RunCoins));
             RunCoins *= 2;
             BankCoins();
             ShowGameOver(lastNewBest, SaveData.BestScore);
