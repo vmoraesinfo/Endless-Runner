@@ -460,6 +460,7 @@ public static partial class GameBuilder
 
         var select = Object.FindFirstObjectByType<SelectCars>(FindObjectsInactive.Include);
         AddGarageCars(select.carHolder.transform);
+        BuildShowroom(select.carHolder.transform);
         BuildCatalog(select.carHolder.transform);
 
         // A câmera visível da garagem é a de maior depth. Foi enquadrada em paisagem;
@@ -481,15 +482,15 @@ public static partial class GameBuilder
         ui.gameObject.AddComponent<SafeArea>();
         ui.SetAsFirstSibling();
 
-        // Topo: recorde à esquerda, moedas à direita, nome do carro no meio.
-        select.bestText = Text(ui, "Best", "", 44, TextAlignmentOptions.Left, Color.white,
-            new Vector2(0, 1), new Vector2(0, 1), new Vector2(40, -60), new Vector2(560, 80), new Vector2(0, 1));
+        // Topo: botões à esquerda, moedas e recorde à direita, nome do carro abaixo.
+        select.bestText = Text(ui, "Best", "", 34, TextAlignmentOptions.Right, new Color(1f, 0.85f, 0.4f),
+            new Vector2(1, 1), new Vector2(1, 1), new Vector2(-40, -168), new Vector2(460, 56), new Vector2(1, 1));
         select.coinsText = CoinPill(ui, new Vector2(1, 1), new Vector2(-40, -50));
-        var namePill = Panel(ui, "CarNamePill", Pill, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -300), new Vector2(940, 120));
+        var namePill = Panel(ui, "CarNamePill", Pill, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -270), new Vector2(940, 120));
         select.carNameText = Text(namePill, "CarName", "CARRO", 64, TextAlignmentOptions.Center, Color.white,
             Vector2.zero, Vector2.one, Vector2.zero, new Vector2(-40, 0));
 
-        var badge = Panel(ui, "LockedBadge", new Color(0.85f, 0.2f, 0.2f, 0.95f), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -410), new Vector2(360, 80));
+        var badge = Panel(ui, "LockedBadge", new Color(0.85f, 0.2f, 0.2f, 0.95f), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -380), new Vector2(360, 80));
         Text(badge, "Label", "BLOQUEADO", 40, TextAlignmentOptions.Center, Color.white, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
         select.lockedBadge = badge.gameObject;
 
@@ -497,7 +498,9 @@ public static partial class GameBuilder
         var action = Button(ui, "ActionButton", "JOGAR", Green, new Vector2(0.5f, 0), new Vector2(0, 330), new Vector2(640, 180), 72, select.OnActionButton);
         select.actionButton = action;
         select.actionButtonText = action.GetComponentInChildren<TMP_Text>();
+        action.gameObject.AddComponent<Pulse>().amount = 0.035f;
         AddMapButton(ui, select);
+        AddNextCarBar(ui, select);
 
         BuildGarageMenus(canvas.transform, ui, select);
         BuildShopUI(canvas.transform, ui, select);
@@ -524,7 +527,7 @@ public static partial class GameBuilder
         var top = new Vector2(0.5f, 1);
         var center = new Vector2(0.5f, 0.5f);
 
-        var missionsButton = Button(ui, "MissionsButton", "MISSÕES", Orange, new Vector2(0, 1), new Vector2(180, -165), new Vector2(300, 100), 40, menus.OpenMissions);
+        var missionsButton = Button(ui, "MissionsButton", "MISSÕES", Orange, new Vector2(0, 1), new Vector2(170, -75), new Vector2(260, 100), 38, menus.OpenMissions);
         var badge = Place(NewRect("Badge"), missionsButton.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-6, -6), new Vector2(44, 44));
         var badgeImg = badge.gameObject.AddComponent<Image>();
         badgeImg.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
@@ -616,7 +619,8 @@ public static partial class GameBuilder
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1080, 1920);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        // Celulares em retrato variam muito na altura (16:9 a 21:9); casar pela largura evita UI espremida.
+        scaler.matchWidthOrHeight = 0f;
     }
 
     // ---------------------------------------------------------------- cena da corrida

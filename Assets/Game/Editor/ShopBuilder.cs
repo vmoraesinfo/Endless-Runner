@@ -21,7 +21,7 @@ public static partial class GameBuilder
         var center = new Vector2(0.5f, 0.5f);
 
         // Botão "MELHORIAS" no canto direito, espelhando o de missões.
-        Button(ui, "UpgradesButton", "MELHORIAS", Purple, new Vector2(1, 1), new Vector2(-190, -165), new Vector2(300, 100), 40, menus.OpenUpgrades);
+        Button(ui, "UpgradesButton", "MELHORIAS", Purple, new Vector2(0, 1), new Vector2(450, -75), new Vector2(280, 100), 38, menus.OpenUpgrades);
 
         // Painel de melhorias
         var panel = Stretch(NewRect("UpgradesPanel"), canvas);
@@ -67,7 +67,7 @@ public static partial class GameBuilder
         var picker = ui.gameObject.AddComponent<PaintPicker>();
         picker.garage = select;
         var top = new Vector2(0.5f, 1);
-        var root = Place(NewRect("PaintPicker"), ui, top, top, new Vector2(0, -530), new Vector2(940, 190));
+        var root = Place(NewRect("PaintPicker"), ui, top, top, new Vector2(0, -470), new Vector2(940, 190));
         picker.root = root.gameObject;
 
         int n = Paints.All.Length;

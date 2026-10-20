@@ -338,7 +338,7 @@ public static class SmokeTest
         captureCam = cam;
         pendingCaptureName = name;
         pendingCapture = new Dictionary<Canvas, RenderMode>();
-        cam.targetTexture = RenderTexture.GetTemporary(540, 960, 24);
+        cam.targetTexture = RenderTexture.GetTemporary(540, 1170, 24); // proporção de celular atual (19,5:9)
         foreach (var c in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
         {
             if (!c.isRootCanvas) continue;

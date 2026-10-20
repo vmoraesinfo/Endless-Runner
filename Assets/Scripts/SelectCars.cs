@@ -25,6 +25,11 @@ public class SelectCars : MonoBehaviour
     public GameObject lockedBadge;
     public TMP_Text mapText;
 
+    [Header("Próximo carro (objetivo)")]
+    public GameObject nextCarRoot;
+    public TMP_Text nextCarText;
+    public Image nextCarFill;
+
     /// <summary>Carro em exibição e se já é do jogador (usado pela escolha de pintura).</summary>
     public int CurrentCar => carIndex;
     public bool CurrentOwned => catalog != null && SaveData.IsCarUnlocked(carIndex, catalog.Get(carIndex).price);
@@ -117,6 +122,7 @@ public class SelectCars : MonoBehaviour
         coinsText.text = SaveData.Coins.ToString();
         bestText.text = SaveData.BestScore > 0 ? $"RECORDE: {SaveData.BestScore:N0} pts" : "";
         lockedBadge.SetActive(!unlocked);
+        RefreshNextCar();
 
         if (mapText != null && maps != null && maps.Count > 0)
         {
@@ -142,6 +148,28 @@ public class SelectCars : MonoBehaviour
             actionButtonText.text = $"COMPRAR  {entry.price}";
             actionButton.interactable = SaveData.Coins >= entry.price;
         }
+    }
+
+    /// <summary>Mostra o carro mais barato que o jogador ainda não tem e quanto falta para comprá-lo.</summary>
+    void RefreshNextCar()
+    {
+        if (nextCarRoot == null) return;
+        int next = -1;
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            var e = catalog.Get(i);
+            if (SaveData.IsCarUnlocked(i, e.price)) continue;
+            if (next < 0 || e.price < catalog.Get(next).price) next = i;
+        }
+        nextCarRoot.SetActive(next >= 0);
+        if (next < 0) return;
+
+        var target = catalog.Get(next);
+        int coins = SaveData.Coins;
+        nextCarFill.fillAmount = Mathf.Clamp01(coins / (float)target.price);
+        nextCarText.text = coins >= target.price
+            ? $"DÁ PARA COMPRAR: {target.displayName.ToUpperInvariant()}!"
+            : $"PRÓXIMO CARRO: {target.displayName.ToUpperInvariant()}  |  FALTAM {target.price - coins}";
     }
 
     List<GameObject> GetAllChildren(GameObject parent)

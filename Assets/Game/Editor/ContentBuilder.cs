@@ -120,6 +120,76 @@ public static partial class GameBuilder
         select.mapText = button.GetComponentInChildren<TMP_Text>();
     }
 
+    /// <summary>Barra de objetivo acima do seletor de pista: "Próximo carro: X | faltam N moedas".</summary>
+    static void AddNextCarBar(RectTransform ui, SelectCars select)
+    {
+        var bottom = new Vector2(0.5f, 0);
+        // No alto, abaixo das cores: a parte de baixo da tela é do carro, do seletor de pista e do JOGAR.
+        var topAnchor = new Vector2(0.5f, 1);
+        var root = Panel(ui, "NextCar", Pill, topAnchor, topAnchor, new Vector2(0, -640), new Vector2(880, 100));
+        select.nextCarText = Text(root, "Label", "", 32, TextAlignmentOptions.Center, Color.white,
+            new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -8), new Vector2(860, 50), new Vector2(0.5f, 1));
+        select.nextCarFill = Bar(root, "Progress", bottom, new Vector2(0, 24), new Vector2(820, 26), new Color(1f, 1f, 1f, 0.15f), Gold);
+        select.nextCarRoot = root.gameObject;
+    }
+
+    /// <summary>
+    /// Vitrine da garagem: plataforma escura com anel de luz sob o carro, holofote e brilhos subindo.
+    /// Recriada a cada build (objeto "Showroom" na raiz da cena).
+    /// </summary>
+    static void BuildShowroom(Transform holder)
+    {
+        var old = GameObject.Find("Showroom");
+        if (old != null) Object.DestroyImmediate(old);
+
+        Transform car = null;
+        foreach (Transform c in holder) if (c.gameObject.activeSelf) { car = c; break; }
+        if (car == null) car = holder.GetChild(0);
+        bool wasActive = car.gameObject.activeSelf;
+        car.gameObject.SetActive(true);
+        Bounds b = RendererBounds(car.gameObject);
+        car.gameObject.SetActive(wasActive);
+
+        float size = Mathf.Max(b.size.x, b.size.z);
+        var basePos = new Vector3(b.center.x, b.min.y, b.center.z);
+        var root = new GameObject("Showroom").transform;
+        root.position = basePos;
+
+        var disc = Mat("ShowroomDisc", new Color(0.1f, 0.11f, 0.14f), null, null, null, 0.75f, 0.6f);
+        var ring = Mat("ShowroomRing", new Color(0.2f, 0.8f, 1f), null, null, null, 0.5f, 0f, new Color(0.5f, 2f, 3f));
+
+        var plate = Primitive(PrimitiveType.Cylinder, "Plate", root, disc, new Vector3(0, -0.04f * size, 0), new Vector3(size * 1.1f, 0.03f * size, size * 1.1f));
+        plate.AddComponent<Rotator>();
+        Primitive(PrimitiveType.Cylinder, "Ring", root, ring, new Vector3(0, -0.06f * size, 0), new Vector3(size * 1.2f, 0.02f * size, size * 1.2f));
+
+        var spot = new GameObject("Spotlight").AddComponent<Light>();
+        spot.transform.SetParent(root, false);
+        spot.type = LightType.Spot;
+        spot.transform.localPosition = new Vector3(0, size * 1.3f, -size * 0.25f);
+        spot.transform.LookAt(basePos);
+        spot.range = size * 3f;
+        spot.spotAngle = 65f;
+        spot.intensity = 8f;
+        spot.color = new Color(1f, 0.95f, 0.85f);
+        spot.shadows = LightShadows.None;
+
+        var sparkles = BuildBurst("Sparkles", root, ring, Color.white, 0.06f * size, 0.15f * size, -0.02f);
+        sparkles.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+        var main = sparkles.main;
+        main.loop = true;
+        main.playOnAwake = true;
+        main.duration = 5f;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(2f, 3.5f);
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        var emission = sparkles.emission;
+        emission.SetBursts(new ParticleSystem.Burst[0]);
+        emission.rateOverTime = 10f;
+        var shape = sparkles.shape;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = size * 0.6f;
+        sparkles.Play();
+    }
+
     // ---------------------------------------------------------------- obras
 
     static GameObject CityPrefab(string relative) =>
