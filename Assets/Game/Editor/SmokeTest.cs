@@ -338,7 +338,8 @@ public static class SmokeTest
         captureCam = cam;
         pendingCaptureName = name;
         pendingCapture = new Dictionary<Canvas, RenderMode>();
-        cam.targetTexture = RenderTexture.GetTemporary(540, 1170, 24); // proporção de celular atual (19,5:9)
+        // Modo loja (-storeShots): 1080x1920, o formato aceito pela Play Store. Normal: proporção de celular atual.
+        cam.targetTexture = StoreMode ? RenderTexture.GetTemporary(1080, 1920, 24) : RenderTexture.GetTemporary(540, 1170, 24);
         foreach (var c in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
         {
             if (!c.isRootCanvas) continue;
@@ -372,12 +373,29 @@ public static class SmokeTest
         pendingCapture = null;
     }
 
+    static bool StoreMode => System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-storeShots") >= 0;
+
+    // Telas escolhidas para a página da loja, na ordem em que aparecem lá.
+    static readonly string[] StoreShots = { "06_nitro", "12_city_run", "03c_paint_blue", "03b_upgrades", "05_run_early", "08_gameover" };
+
+    static void CopyStoreShots()
+    {
+        string dir = Path.GetFullPath("Store/screenshots");
+        Directory.CreateDirectory(dir);
+        for (int i = 0; i < StoreShots.Length; i++)
+        {
+            string src = Path.Combine(OutDir, StoreShots[i] + ".png");
+            if (File.Exists(src)) File.Copy(src, Path.Combine(dir, $"{i + 1:00}_{StoreShots[i]}.png"), true);
+        }
+    }
+
     static void Finish()
     {
         EditorApplication.update -= Tick;
         SessionState.SetBool(ActiveKey, false);
         Log(failures.Count == 0 ? "RESULTADO: PASSOU" : $"RESULTADO: FALHOU ({failures.Count})");
         File.WriteAllText(Path.Combine(OutDir, "report.txt"), report.ToString());
+        if (StoreMode) CopyStoreShots();
         PlayerPrefs.DeleteAll();
         EditorApplication.Exit(failures.Count == 0 ? 0 : 1);
     }

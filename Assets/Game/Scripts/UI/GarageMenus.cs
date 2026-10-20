@@ -31,6 +31,7 @@ public class GarageMenus : MonoBehaviour
     {
         missionsPanel.SetActive(false);
         if (upgradesPanel != null) upgradesPanel.SetActive(false);
+        if (shopPanel != null) shopPanel.SetActive(false);
         dailyPanel.SetActive(DailyReward.Available);
         if (DailyReward.Available)
         {
@@ -39,6 +40,62 @@ public class GarageMenus : MonoBehaviour
             dailyRewardText.text = $"+{DailyReward.RewardFor(day)}";
         }
         RefreshBadge();
+    }
+
+    // ---------- Loja (compras com dinheiro real) ----------
+
+    [Header("Loja")]
+    public GameObject shopPanel;
+    public TMP_Text noAdsPrice;
+    public Button noAdsButton;
+    public TMP_Text starterPrice;
+    public TMP_Text shopStatus;
+
+    void OnEnable() => Purchases.Changed += RefreshShop;
+    void OnDisable() => Purchases.Changed -= RefreshShop;
+
+    public void OpenShop()
+    {
+        Sfx.I.Click();
+        shopPanel.SetActive(true);
+        shopStatus.text = "";
+        RefreshShop();
+    }
+
+    public void CloseShop()
+    {
+        Sfx.I.Click();
+        shopPanel.SetActive(false);
+    }
+
+    public void BuyNoAds() => Buy(Purchases.RemoveAdsId);
+    public void BuyStarter() => Buy(Purchases.StarterPackId);
+
+    public void RestorePurchases()
+    {
+        Purchases.Instance.Restore();
+        shopStatus.text = "Compras restauradas.";
+    }
+
+    void Buy(string id)
+    {
+        shopStatus.text = "Abrindo a loja...";
+        Purchases.Instance.Buy(id, ok =>
+        {
+            shopStatus.text = ok ? "Compra concluída. Obrigado!" : "Compra não concluída.";
+            if (ok) Sfx.I.PowerUp();
+            RefreshShop();
+            garage.RefreshUI();
+        });
+    }
+
+    void RefreshShop()
+    {
+        if (shopPanel == null || !shopPanel.activeSelf) return;
+        bool noAds = SaveData.NoAds;
+        noAdsButton.interactable = !noAds;
+        noAdsPrice.text = noAds ? "COMPRADO" : Purchases.Instance.Price(Purchases.RemoveAdsId, "R$ 9,90");
+        starterPrice.text = Purchases.Instance.Price(Purchases.StarterPackId, "R$ 4,90");
     }
 
     // ---------- Melhorias ----------

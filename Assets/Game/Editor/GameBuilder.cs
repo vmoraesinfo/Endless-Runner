@@ -992,8 +992,16 @@ public static partial class GameBuilder
 
     // ---------------------------------------------------------------- projeto
 
+    // Identidade do app. O ID do pacote não pode mudar depois da primeira publicação na Play Store.
+    public const string ProductName = "Traffic Rush: Raspão";
+    public const string PackageId = "com.fontanamoraesgames.trafficrush";
+
     static void ConfigureProject()
     {
+        PlayerSettings.productName = ProductName;
+        PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, PackageId);
+        if (string.IsNullOrEmpty(PlayerSettings.bundleVersion) || PlayerSettings.bundleVersion == "0.1.0") PlayerSettings.bundleVersion = "1.0.0";
+
         EditorBuildSettings.scenes = new[]
         {
             new EditorBuildSettingsScene(GarageScenePath, true),

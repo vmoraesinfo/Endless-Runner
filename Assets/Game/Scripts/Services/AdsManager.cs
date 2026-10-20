@@ -133,6 +133,7 @@ public class AdsManager : MonoBehaviour
 
     public void ShowBanner()
     {
+        if (SaveData.NoAds) { HideBanner(); return; } // comprou "Remover anúncios"
         bannerWanted = true;
         if (!initialized || string.IsNullOrEmpty(settings.Banner)) return;
         if (banner == null)
@@ -189,7 +190,7 @@ public class AdsManager : MonoBehaviour
     {
         gameOvers++;
         int every = settings.interstitialEveryNGameOvers;
-        bool due = every > 0 && gameOvers % every == 0;
+        bool due = every > 0 && gameOvers % every == 0 && !SaveData.NoAds;
         if (due && interstitial != null && interstitial.CanShowAd())
         {
             pendingInterstitialClosed = next;

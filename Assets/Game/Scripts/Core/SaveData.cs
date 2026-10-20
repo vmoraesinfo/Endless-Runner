@@ -52,6 +52,13 @@ public static class SaveData
         PlayerPrefs.Save();
     }
 
+    /// <summary>Comprou "Remover anúncios": sem banner e sem intersticial.</summary>
+    public static bool NoAds
+    {
+        get => PlayerPrefs.GetInt("no_ads", 0) == 1;
+        set { PlayerPrefs.SetInt("no_ads", value ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
     public static bool Sound
     {
         get => PlayerPrefs.GetInt("sound", 1) == 1;

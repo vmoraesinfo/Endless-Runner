@@ -149,6 +149,7 @@ public class GameManager : MonoBehaviour
         ui.UpdatePowerUps(0f, 0);
         AdsManager.Instance.HideBanner();
         Sfx.ApplyVolume();
+        Music.PlayRace();
     }
 
     void Update()

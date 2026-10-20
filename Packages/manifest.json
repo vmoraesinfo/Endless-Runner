@@ -11,6 +11,7 @@
   ],
   "dependencies": {
     "com.google.ads.mobile": "11.5.0",
+    "com.unity.purchasing": "5.4.4",
     "com.unity.ai.navigation": "2.0.14",
     "com.unity.collab-proxy": "2.13.6",
     "com.unity.device-simulator.devices": "1.0.1",

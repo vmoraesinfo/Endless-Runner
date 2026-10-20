@@ -60,6 +60,48 @@ public static partial class GameBuilder
         panel.SetAsLastSibling();
 
         BuildPaintPicker(ui, select);
+        BuildStorePanel(canvas, ui, menus);
+    }
+
+    /// <summary>Botão "LOJA" no topo e painel com as compras reais (Remover anúncios e Pacote inicial).</summary>
+    static void BuildStorePanel(Transform canvas, RectTransform ui, GarageMenus menus)
+    {
+        var old = canvas.Find("ShopPanel");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        var top = new Vector2(0.5f, 1);
+        var center = new Vector2(0.5f, 0.5f);
+
+        Button(ui, "ShopButton", "LOJA", Gold, new Vector2(0, 1), new Vector2(670, -75), new Vector2(130, 100), 32, menus.OpenShop)
+            .GetComponentInChildren<TMP_Text>().color = new Color(0.3f, 0.18f, 0f);
+
+        var panel = Stretch(NewRect("ShopPanel"), canvas);
+        panel.gameObject.AddComponent<Image>().color = Dim;
+        var card = Panel(panel, "Card", Card, center, center, Vector2.zero, new Vector2(980, 1260));
+        Text(card, "Title", "LOJA", 84, TextAlignmentOptions.Center, Color.white, top, top, new Vector2(0, -100), new Vector2(900, 120));
+
+        menus.noAdsButton = Offer(card, "NoAds", -320, "SEM ANÚNCIOS",
+            "Tira o banner e os anúncios entre partidas.\nVídeos com prêmio continuam opcionais.", Purple, menus.BuyNoAds, out menus.noAdsPrice);
+        Offer(card, "Starter", -660, "PACOTE INICIAL",
+            $"+{Purchases.StarterCoins:N0} moedas para comprar\ncarros e melhorias agora.", Orange, menus.BuyStarter, out menus.starterPrice);
+
+        menus.shopStatus = Text(card, "Status", "", 32, TextAlignmentOptions.Center, Gold, top, top, new Vector2(0, -880), new Vector2(900, 60));
+        Button(card, "Restore", "RESTAURAR COMPRAS", Gray, new Vector2(0.5f, 0), new Vector2(0, 260), new Vector2(520, 100), 34, menus.RestorePurchases);
+        Button(card, "Close", "FECHAR", Blue, new Vector2(0.5f, 0), new Vector2(0, 110), new Vector2(500, 130), 52, menus.CloseShop);
+        menus.shopPanel = panel.gameObject;
+        panel.gameObject.SetActive(false);
+    }
+
+    static Button Offer(RectTransform card, string name, float y, string title, string desc, Color color, UnityAction buy, out TMP_Text price)
+    {
+        var top = new Vector2(0.5f, 1);
+        var row = Panel(card, name, new Color(1f, 1f, 1f, 0.07f), top, top, new Vector2(0, y), new Vector2(900, 300));
+        Text(row, "Title", title, 52, TextAlignmentOptions.Left, color == Gold ? Gold : Color.white,
+            new Vector2(0, 1), new Vector2(0, 1), new Vector2(40, -30), new Vector2(560, 70), new Vector2(0, 1));
+        Text(row, "Description", desc, 32, TextAlignmentOptions.Left, new Color(0.8f, 0.85f, 0.95f),
+            new Vector2(0, 1), new Vector2(0, 1), new Vector2(40, -115), new Vector2(560, 140), new Vector2(0, 1));
+        var button = Button(row, "Buy", "R$ 0,00", color, new Vector2(1, 0.5f), new Vector2(-160, 0), new Vector2(270, 150), 40, buy);
+        price = button.GetComponentInChildren<TMP_Text>();
+        return button;
     }
 
     static void BuildPaintPicker(RectTransform ui, SelectCars select)

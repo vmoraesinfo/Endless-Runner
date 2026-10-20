@@ -51,6 +51,8 @@ public class SelectCars : MonoBehaviour
         carIndex = Mathf.Clamp(SaveData.SelectedCar, 0, Cars.Count - 1);
         DisplayCars();
         AdsManager.Instance.ShowBanner();
+        Music.PlayMenu();
+        _ = Purchases.Instance; // conecta à loja cedo para restaurar "Remover anúncios"
     }
 
     public void NextCar()
